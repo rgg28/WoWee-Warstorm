@@ -36,27 +36,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Parchear CMakeLists.txt para OpenSSL de Android
-      run: |
-        # Definimos la ruta absoluta total para que Ninja no use ../../../
-        OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
-        
-        PARCHE_ALIAS="set(OPENSSL_INCLUDE_DIR \"${OPENSSL_DIR}/include\")\n\
-        set(OPENSSL_CRYPTO_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libcrypto.a\")\n\
-        set(OPENSSL_SSL_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libssl.a\")\n\
-        set(OPENSSL_LIBRARIES \${OPENSSL_CRYPTO_LIBRARY} \${OPENSSL_SSL_LIBRARY})\n\
-        set(OpenSSL_FOUND TRUE)\n\
-        if(NOT TARGET OpenSSL::Crypto)\n\
-          add_library(OpenSSL::Crypto UNKNOWN IMPORTED)\n\
-          set_target_properties(OpenSSL::Crypto PROPERTIES IMPORTED_LOCATION \"\${OPENSSL_CRYPTO_LIBRARY}\" INTERFACE_INCLUDE_DIRECTORIES \"\${OPENSSL_INCLUDE_DIR}\")\n\
-        endif()\n\
-        if(NOT TARGET OpenSSL::SSL)\n\
-          add_library(OpenSSL::SSL UNKNOWN IMPORTED)\n\
-          set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION \"\${OPENSSL_SSL_LIBRARY}\" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)\n\
-        endif()"
-        
-        sed -i "s|find_package(OpenSSL REQUIRED)|${PARCHE_ALIAS}|g" CMakeLists.txt
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -69,9 +48,19 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Forzamos una limpieza total de las carpetas de caché .cxx de CMake antes de compilar
+        OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
+        
+        # Pasamos las rutas absolutas exactas como argumentos directos de CMake para evitar que dependa de find_package
         ./gradlew clean
-        ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon \
+          "-Pandroid.overridePathCheck=true" \
+          "-Pandroid.injected.build.model.only=false" \
+          "-Pandroid.native.buildOutput=${{ github.workspace }}/build_output" \
+          -PEXTERNAL_OPENSSL_ROOT="$OPENSSL_DIR" \
+          -DOPENSSL_ROOT_DIR="$OPENSSL_DIR" \
+          -DOPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include" \
+          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a" \
+          -DOPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a"
 
     - name: Subir la APK resultante a GitHub
       uses: actions/upload-artifact@v4
