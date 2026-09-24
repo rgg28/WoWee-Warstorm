@@ -36,6 +36,16 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
+    - name: Engañar la Ruta Nativa de OpenSSL (Solución Definitiva)
+      run: |
+        # Creamos la carpeta exacta que el build.gradle busca de forma interna por defecto
+        mkdir -p build-android-deps/arm64-v8a
+        
+        # Copiamos tus archivos fisicos de OpenSSL con sus cabeceras a la ruta esperada
+        cp -r android/openssl/include build-android-deps/arm64-v8a/
+        cp android/openssl/arm64-v8a/*.a build-android-deps/arm64-v8a/ || true
+        cp android/openssl/arm64-v8a/*.so build-android-deps/arm64-v8a/ || true
+
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -48,18 +58,10 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
-        
-        # Eliminamos el parametro de salida corrupto y dejamos los inyectores de OpenSSL nativos que funcionaron
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false" \
-          -PEXTERNAL_OPENSSL_ROOT="$OPENSSL_DIR" \
-          -DOPENSSL_ROOT_DIR="$OPENSSL_DIR" \
-          -DOPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include" \
-          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a" \
-          -DOPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a"
+          "-Pandroid.injected.build.model.only=false"
 
     - name: Subir la APK resultante a GitHub
       uses: actions/upload-artifact@v4
