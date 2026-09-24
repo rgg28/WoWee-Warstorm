@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
-// Se utiliza ${projectDir} para partir exactamente desde la posicion de la app, rompiendo el bucle de retroceso de Ninja
-def opensslFor = { abi -> file("${projectDir}/../openssl/${abi}").absolutePath }
+// Apuntamos la funcion directamente a la ruta fija global donde estan tus archivos fisicos reales subidos
+def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
 
@@ -74,8 +74,8 @@ android {
             cmake {
                 targets 'wowee'
                 arguments '-DANDROID_STL=c++_shared',
-                          "-DOPENSSL_ROOT_DIR=${opensslFor('arm64-v8a')}",
-                          "-DCMAKE_FIND_ROOT_PATH=${opensslFor('arm64-v8a')}"
+                          '-DOPENSSL_ROOT_DIR=/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl',
+                          '-DCMAKE_FIND_ROOT_PATH=/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl'
                 cppFlags '-std=c++20'
             }
         }
