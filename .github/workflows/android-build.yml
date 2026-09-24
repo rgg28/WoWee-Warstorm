@@ -35,12 +35,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descargar SDL3 de forma Forzada Local (Solución Definitiva)
-      run: |
-        # Rompemos el bucle de la red bajando el codigo limpio de SDL3 en un directorio fisico normal
-        rm -rf extern/SDL3
-        git clone --depth 1 https://github.com extern/SDL3
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -53,7 +47,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Borramos la cache nativa para obligar a registrar la nueva ruta fisica de SDL3
+        # Borramos la cache nativa para limpiar los rastros de los intentos fallidos anteriores
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
