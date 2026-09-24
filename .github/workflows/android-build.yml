@@ -50,12 +50,11 @@ jobs:
         cd android
         OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
         
-        # Pasamos las rutas absolutas exactas como argumentos directos de CMake para evitar que dependa de find_package
+        # Eliminamos el parametro de salida corrupto y dejamos los inyectores de OpenSSL nativos que funcionaron
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false" \
-          "-Pandroid.native.buildOutput=${{ github.workspace }}/build_output" \
           -PEXTERNAL_OPENSSL_ROOT="$OPENSSL_DIR" \
           -DOPENSSL_ROOT_DIR="$OPENSSL_DIR" \
           -DOPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include" \
