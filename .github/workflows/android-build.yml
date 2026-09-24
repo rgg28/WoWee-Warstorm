@@ -35,22 +35,21 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descomprimir y Corregir Duplicado de GLM (Solución Definitiva)
+    - name: Descomprimir y Solucionar Carpeta Duplicada de GLM
       run: |
-        # Aseguramos la instalación de unzip en el servidor Linux
+        # Forzamos la instalación de unzip en el servidor Linux
         sudo apt-get update && sudo apt-get install -y unzip
         
-        # 1. Descomprimimos tu archivo completo en una carpeta temporal limpia de la nube
-        mkdir -p temporal_extraccion
-        unzip -q extern/glm.zip -d temporal_extraccion
+        # 1. Creamos una carpeta temporal limpia para extraer el zip
+        mkdir -p temporal_glm
+        unzip -q extern/glm.zip -d temporal_glm
         
-        # 2. Destruimos cualquier residuo viejo en tu carpeta destino
-        rm -rf extern/glm
+        # 2. Creamos la carpeta destino limpia que exige tu CMakeLists.txt
         mkdir -p extern/glm
         
-        # 3. Solución de tu captura: Entramos directo a la carpeta duplicada interna y movemos sus archivos .hpp
-        # Esto elimina el salto extra de carpetas y lo deja exactamente como extern/glm/glm.hpp
-        cp -r temporal_glm_extra/glm/glm/* extern/glm/ || cp -r temporal_extraccion/*/glm/* extern/glm/ || cp -r temporal_extraccion/glm/* extern/glm/ || true
+        # 3. Solución de tu captura: Copiamos los archivos que están dentro del duplicado (glm/glm/*)
+        # Esto quita el nivel repetido y deja glm.hpp directamente en extern/glm/glm.hpp
+        cp -r temporal_glm/glm/glm/* extern/glm/ || cp -r temporal_glm/*/glm/* extern/glm/ || cp -r temporal_glm/glm/* extern/glm/ || true
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -64,7 +63,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Borramos la cache nativa para limpiar los residuos del intento fallido anterior
+        # Borramos la cache nativa para obligar al sistema a leer el mapa corregido sin duplicados
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
