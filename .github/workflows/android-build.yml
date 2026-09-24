@@ -35,17 +35,17 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descomprimir Librería GLM Limpia (Solución Web)
+    - name: Descomprimir Librería GLM dentro de Include (Tu Solución)
       run: |
-        # Forzamos la instalación de la herramienta de descompresión
+        # Aseguramos la instalación de la herramienta de descompresión en Linux
         sudo apt-get update && sudo apt-get install -y unzip
         
-        # Eliminamos cualquier residuo previo en la carpeta de destino
-        rm -rf extern/glm
+        # Eliminamos cualquier residuo previo en la carpeta include/glm por seguridad
+        rm -rf include/glm
         
-        # Descomprimimos directamente el archivo glm.zip en la carpeta externa
-        # Como tu zip contiene la carpeta 'glm' interna, se generará la ruta exacta extern/glm/ automáticamente
-        unzip -q extern/glm.zip -d extern/
+        # 🔥 EL TRUCO MAESTRO: Descomprimimos tu archivo desde extern/ directamente dentro de include/
+        # Al traer la carpeta 'glm' interna, se generará la ruta perfecta include/glm/ exigida por Clang
+        unzip -q extern/glm.zip -d include/
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -59,7 +59,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Borramos la cache nativa corrupta previa para obligar al sistema a leer el mapa corregido
+        # Limpiamos la caché nativa para obligar al sistema a escanear el nuevo directorio include/glm
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
