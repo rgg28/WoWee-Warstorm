@@ -35,13 +35,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Destruir Cache Oculta y Sincronizar OpenSSL (Solución Definitiva)
-      run: |
-        # Forzamos la creacion de la ruta fisica que Ninja busca retrocediendo 5 niveles desde .cxx/
-        mkdir -p openssl/arm64-v8a
-        cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -54,11 +47,8 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        
-        # 🔥 EL TRUCO HISTÓRICO: Borramos por completo la carpeta temporal oculta donde Ninja guarda la ruta vieja
+        # Borramos la cache nativa para obligar a registrar los archivos .so.1.1 reales
         rm -rf app/.cxx/
-        rm -rf .externalNativeBuild/
-        
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
