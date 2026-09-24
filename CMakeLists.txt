@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Directorios de salida de compilación para Android
+# Directorios de salida de compilación nativa para Android
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Desactivar opciones de escritorio, tests y herramientas pesadas
+# Desactivar opciones pesadas de escritorio y pruebas
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 option(WOWEE_BUILD_TESTS "Build tests" OFF)
 option(WOWEE_ENABLE_ASAN "Enable AddressSanitizer" OFF)
@@ -38,21 +38,19 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# Agregar submódulos y dependencias físicas del motor del juego
-add_subdirectory(extern/imgui)
-add_subdirectory(extern/vk-bootstrap)
-add_subdirectory(extern/lua-5.1.5)
-
-# Compilación de la librería nativa principal de WoWee para Android
+# Compilación limpia de la librería nativa principal de WoWee para Android Studio
 add_library(wowee SHARED
     src/main.cpp
-    # (El sistema de Android cargará automáticamente el resto de tus archivos modificados .cpp aquí)
+)
+
+# Mapeamos los directorios de inclusión nativos directamente al target principal
+target_include_directories(wowee PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
 )
 
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    imgui
-    vk-bootstrap
-    lua
 )
