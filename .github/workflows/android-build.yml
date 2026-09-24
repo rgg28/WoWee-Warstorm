@@ -47,7 +47,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Destruimos la carpeta oculta corrupta de cache anterior para obligar a leer la ruta nueva fija
+        # Borramos la cache nativa corrupta previa para forzar la lectura del properties reparado
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
