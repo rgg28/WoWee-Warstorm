@@ -35,6 +35,17 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
+    - name: Descargar e Inyectar Librería GLM de Forma Nativa
+      run: |
+        # 1. Creamos la carpeta faltante extern/glm directamente en el disco del servidor
+        mkdir -p extern/glm
+        
+        # 2. Clonamos unicamente las cabeceras matematicas oficiales desde el repositorio de GLM
+        git clone --depth 1 https://github.com temporal_glm
+        
+        # 3. Copiamos todos los archivos .hpp fundamentales dentro de tu ruta extern/glm
+        cp -r temporal_glm/glm/* extern/glm/ || true
+
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -47,7 +58,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Borramos la cache nativa vieja para forzar al sistema a leer el nuevo archivo puente
+        # Borramos la cache nativa corrupta previa para asimilar GLM limpiamente
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
