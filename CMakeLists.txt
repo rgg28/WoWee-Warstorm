@@ -22,22 +22,6 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
 
-# 🛠️ PARCHE GLOBAL DE OPENSSL PARA ANDROID (Tus archivos físicos)
-set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
-set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.a")
-set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.a")
-set(OPENSSL_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
-set(OpenSSL_FOUND TRUE)
-
-if(NOT TARGET OpenSSL::Crypto)
-  add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::Crypto PROPERTIES IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
-endif()
-if(NOT TARGET OpenSSL::SSL)
-  add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
-endif()
-
 # Compilación limpia de la librería nativa principal de WoWee para Android Studio
 add_library(wowee SHARED
     src/main.cpp
@@ -48,9 +32,4 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
-)
-
-target_link_libraries(wowee PUBLIC 
-    OpenSSL::SSL 
-    OpenSSL::Crypto
 )
