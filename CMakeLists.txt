@@ -22,7 +22,7 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
 
-# 🛠️ CORRECCIÓN HISTÓRICA: Apuntamos exactamente a tus archivos .so.1.1 reales de la captura
+# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1) QUE DESCUBRISTE
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
 set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.so.1.1")
 set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.so.1.1")
@@ -43,12 +43,14 @@ add_library(wowee SHARED
     src/main.cpp
 )
 
-# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye
+# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye de SDL3
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
+    ${CMAKE_BINARY_DIR}/_deps/sdl3-src/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/android/app/.cxx/Debug/g1p334i5/arm64-v8a/_deps/sdl3-src/include
 )
 
 target_link_libraries(wowee PUBLIC 
