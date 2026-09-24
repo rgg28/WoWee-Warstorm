@@ -22,7 +22,7 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
 
-# 🛠️ CREACIÓN DE ALIAS VIRTUALES DE OPENSSL PARA ENLAZAR EL JUEGO
+# 🛠️ CREACIÓN DE ALIAS VIRTUALES DE OPENSSL PARA ENLAZAR EL JUEGO EN ANDROID
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
 set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.a")
 set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.a")
@@ -41,7 +41,7 @@ add_library(wowee SHARED
     src/main.cpp
 )
 
-# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye
+# Mapeamos los directorios de inclusión nativos del motor y submódulos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
