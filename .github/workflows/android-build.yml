@@ -36,10 +36,26 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Parchear CMakeLists.txt para OpenSSL de Android
+    - name: Parchear CMakeLists.txt para OpenSSL de Android (Solución de Alias Completa)
       run: |
         OPENSSL_DIR="${{ github.workspace }}/android/openssl"
-        sed -i "s|find_package(OpenSSL REQUIRED)|set(OPENSSL_INCLUDE_DIR \"${OPENSSL_DIR}/include\")\nset(OPENSSL_CRYPTO_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libcrypto.a\")\nset(OPENSSL_SSL_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libssl.a\")\nset(OPENSSL_LIBRARIES \${OPENSSL_CRYPTO_LIBRARY} \${OPENSSL_SSL_LIBRARY})\nset(OpenSSL_FOUND TRUE)|g" CMakeLists.txt
+        
+        # Inyectamos el mapeo de alias modernos OpenSSL:: para evitar el error de enlace en wowee y auth_probe
+        PARCHE_ALIAS="set(OPENSSL_INCLUDE_DIR \"${OPENSSL_DIR}/include\")\n\
+        set(OPENSSL_CRYPTO_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libcrypto.a\")\n\
+        set(OPENSSL_SSL_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libssl.a\")\n\
+        set(OPENSSL_LIBRARIES \${OPENSSL_CRYPTO_LIBRARY} \${OPENSSL_SSL_LIBRARY})\n\
+        set(OpenSSL_FOUND TRUE)\n\
+        if(NOT TARGET OpenSSL::Crypto)\n\
+          add_library(OpenSSL::Crypto UNKNOWN IMPORTED)\n\
+          set_target_properties(OpenSSL::Crypto PROPERTIES IMPORTED_LOCATION \"\${OPENSSL_CRYPTO_LIBRARY}\" INTERFACE_INCLUDE_DIRECTORIES \"\${OPENSSL_INCLUDE_DIR}\")\n\
+        endif()\n\
+        if(NOT TARGET OpenSSL::SSL)\n\
+          add_library(OpenSSL::SSL UNKNOWN IMPORTED)\n\
+          set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION \"\${OPENSSL_SSL_LIBRARY}\" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)\n\
+        endif()"
+        
+        sed -i "s|find_package(OpenSSL REQUIRED)|${PARCHE_ALIAS}|g" CMakeLists.txt
 
     - name: Forzar Permisos Totales en Linux
       run: |
