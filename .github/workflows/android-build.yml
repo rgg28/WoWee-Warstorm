@@ -35,10 +35,13 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Sincronizar Espejo de OpenSSL en la Raíz
+    - name: Forzar Estructura Relativa para Ninja (Solución Definitiva)
       run: |
-        # Satisface cualquier intento de busqueda de ruta del build.gradle viejo en internet
+        # Creamos fisicamente la carpeta que Ninja busca retrocediendo 5 niveles desde su directorio interno .cxx/
+        # Estructura: android/app/.cxx/Debug/3h40571g/arm64-v8a -> subiendo 5 niveles llega exactamente a la raiz del proyecto
         mkdir -p openssl/arm64-v8a
+        
+        # Copiamos tus archivos fisicos de OpenSSL a esa posicion externa para satisfacer al enlazador de Ninja
         cp -r android/openssl/include openssl/ || true
         cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
         cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
