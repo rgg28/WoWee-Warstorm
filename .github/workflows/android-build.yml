@@ -31,9 +31,17 @@ jobs:
       run: |
         yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Instalar versión exacta de NDK y CMake
+    - name: Instalar versión exacta NDK y CMake
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
+
+    - name: Sincronizar Espejo de OpenSSL
+      run: |
+        # Creamos una copia en la raiz para cubrir cualquier busqueda relativa hacia atras
+        mkdir -p openssl/arm64-v8a
+        cp -r android/openssl/include openssl/ || true
+        cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
+        cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -41,18 +49,18 @@ jobs:
         chmod -R +x tools/ || true
         chmod -R +x android/ || true
 
-    - name: Compilar APK con Gradle
+    - name: Compilar APK con Gradle (Inyección Definitiva)
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        
-        # 🔥 EL TRUCO DEFINITIVO: Borramos por la fuerza la carpeta de cache nativa corrupta de Android Studio
         rm -rf app/.cxx/
-        
         ./gradlew clean
+        
+        # Inyectamos el valor de la variable opensslRoot que el archivo build.gradle necesita de forma obligatoria
         ./gradlew assembleDebug --no-daemon \
+          "-PopensslRoot=openssl" \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false"
 
