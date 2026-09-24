@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
-// Se define la ruta absoluta directa y real dentro de la maquina virtual de GitHub
-def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl").absolutePath }
+// Se utiliza ${projectDir} para partir exactamente desde la posicion de la app, rompiendo el bucle de retroceso de Ninja
+def opensslFor = { abi -> file("${projectDir}/../openssl/${abi}").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
 
