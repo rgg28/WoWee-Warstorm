@@ -35,20 +35,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Forzar Espejo Físico de OpenSSL (Solución Definitiva)
-      run: |
-        # 1. Aseguramos la ruta que calcula la funcion opensslFor del gradle de internet
-        mkdir -p android/openssl/arm64-v8a
-        cp -r android/openssl/include android/openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.a android/openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so android/openssl/arm64-v8a/ || true
-        
-        # 2. Aseguramos la ruta externa por si Ninja retrocede 5 niveles hasta la raiz desde .cxx/
-        mkdir -p openssl/arm64-v8a
-        cp -r android/openssl/include openssl/ || true
-        cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -61,13 +47,10 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
+        # Destruimos la carpeta oculta corrupta de cache anterior para obligar a leer la ruta nueva fija
         rm -rf app/.cxx/
         ./gradlew clean
-        
-        # Forzamos los dos mapeos de variables en simultáneo para cubrir tanto el build.gradle como el CMake maestro
         ./gradlew assembleDebug --no-daemon \
-          "-PopensslRoot=openssl" \
-          "-PopensslRoot=../../../../openssl" \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false"
 
