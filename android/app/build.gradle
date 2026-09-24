@@ -1,7 +1,7 @@
 plugins { id 'com.android.application' }
 
-// Se define la ruta absoluta fija global de la maquina virtual para OpenSSL en Android
-def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl/${abi}").absolutePath }
+// Se define la ruta absoluta directa y real dentro de la maquina virtual de GitHub
+def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
 
