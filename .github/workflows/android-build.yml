@@ -35,14 +35,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Satisfacer Estructura de Gradle (Solución Definitiva)
-      run: |
-        # Sincronizamos tus archivos de OpenSSL justo en la ruta que la funcion opensslFor espera calcular
-        mkdir -p android/openssl/arm64-v8a
-        cp -r android/openssl/include android/openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.a android/openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so android/openssl/arm64-v8a/ || true
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -57,10 +49,7 @@ jobs:
         cd android
         rm -rf app/.cxx/
         ./gradlew clean
-        
-        # Pasamos el parametro exacto de la variable opensslRoot para obligar al build.gradle a armar la ruta bien
         ./gradlew assembleDebug --no-daemon \
-          "-PopensslRoot=openssl" \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false"
 
