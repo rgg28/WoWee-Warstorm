@@ -35,16 +35,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Construir Ruta de Emergencia para Ninja (Solución Definitiva)
-      run: |
-        # Generamos la carpeta espejo exacta en la raiz que calza con el retroceso de Ninja
-        mkdir -p openssl/arm64-v8a
-        
-        # Copiamos tus librerías fisicas a esa posicion relativa externa para que Ninja las encuentre sí o sí
-        cp -r android/openssl/include openssl/ || true
-        cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -57,13 +47,10 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Destruimos los archivos temporales viejos para obligar a recalcular todo
+        # Borramos la cache nativa corrupta vieja para obligar a leer los nuevos argumentos fijos
         rm -rf app/.cxx/
         ./gradlew clean
-        
-        # Corremos la compilacion inyectando la variable opensslRoot fija
         ./gradlew assembleDebug --no-daemon \
-          "-PopensslRoot=openssl" \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false"
 
