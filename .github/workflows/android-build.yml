@@ -35,13 +35,13 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Sincronizar Espejo de OpenSSL
+    - name: Satisfacer Estructura de Gradle (Solución Definitiva)
       run: |
-        # Creamos una copia en la raiz para cubrir cualquier busqueda relativa hacia atras
-        mkdir -p openssl/arm64-v8a
-        cp -r android/openssl/include openssl/ || true
-        cp android/openssl/arm64-v8a/*.a openssl/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so openssl/arm64-v8a/ || true
+        # Sincronizamos tus archivos de OpenSSL justo en la ruta que la funcion opensslFor espera calcular
+        mkdir -p android/openssl/arm64-v8a
+        cp -r android/openssl/include android/openssl/arm64-v8a/ || true
+        cp android/openssl/arm64-v8a/*.a android/openssl/arm64-v8a/ || true
+        cp android/openssl/arm64-v8a/*.so android/openssl/arm64-v8a/ || true
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -49,7 +49,7 @@ jobs:
         chmod -R +x tools/ || true
         chmod -R +x android/ || true
 
-    - name: Compilar APK con Gradle (Inyección Definitiva)
+    - name: Compilar APK con Gradle
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
@@ -58,7 +58,7 @@ jobs:
         rm -rf app/.cxx/
         ./gradlew clean
         
-        # Inyectamos el valor de la variable opensslRoot que el archivo build.gradle necesita de forma obligatoria
+        # Pasamos el parametro exacto de la variable opensslRoot para obligar al build.gradle a armar la ruta bien
         ./gradlew assembleDebug --no-daemon \
           "-PopensslRoot=openssl" \
           "-Pandroid.overridePathCheck=true" \
