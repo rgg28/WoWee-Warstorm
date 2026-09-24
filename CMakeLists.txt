@@ -22,7 +22,7 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
 
-# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1) QUE DESCUBRISTE
+# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1) REAL QUE DESCUBRISTE
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
 set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.so.1.1")
 set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.so.1.1")
@@ -38,25 +38,20 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# 🛠️ ENLAZADO LOCAL DE SDL3 (Descargado por el script de Actions en la PC de la nube)
-add_subdirectory(extern/SDL3)
-
 # Compilación limpia de la librería nativa principal de WoWee para Android Studio
 add_library(wowee SHARED
     src/main.cpp
 )
 
-# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye
+# Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern/SDL3/include
 )
 
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3-shared
 )
