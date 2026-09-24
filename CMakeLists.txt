@@ -27,9 +27,15 @@ add_library(wowee SHARED
     src/main.cpp
 )
 
-# Mapeamos los directorios de inclusión nativos directamente al target principal
+# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye
 target_include_directories(wowee PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
+)
+
+target_link_libraries(wowee PUBLIC 
+    OpenSSL::SSL 
+    OpenSSL::Crypto
 )
