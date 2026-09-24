@@ -1,13 +1,10 @@
 plugins { id 'com.android.application' }
 
-// OpenSSL is built once per ABI by tools/build-android-deps.sh and handed to
-// CMake the way the desktop and macOS builds hand it theirs.
-def opensslFor = { abi -> file("${rootDir}/openssl/${abi}").absolutePath }
+// Se define la ruta absoluta fija global de la maquina virtual para OpenSSL en Android
+def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl/${abi}").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
 
-// The version comes from the git tag, the way cmake/GitVersion.cmake derives it
-// for the client itself. A source tarball has no tags, hence the fallback.
 def gitVersion = {
     try {
         def out = new ByteArrayOutputStream()
@@ -23,13 +20,6 @@ def gitVersion = {
     }
 }()
 
-// Android wants a monotonic integer. major*10000 + minor*100 + patch keeps the
-// ordering of the tags it comes from.
-//
-// Never below 1: gradle refuses a versionCode of 0 outright, and the 0.0.0 the
-// fallback above returns computes to exactly that. So the no-tags path the
-// comment there describes could not configure at all - a checkout without
-// tags, which is what a shallow CI clone and a source tarball both are.
 def gitVersionCode = {
     def parts = gitVersion.tokenize('.')
     if (parts.size() < 3) return 1
@@ -43,18 +33,12 @@ def gitVersionCode = {
 def stagedAssets = layout.buildDirectory.dir("staged-assets")
 def stagedMusic = layout.buildDirectory.dir("staged-music")
 
-// The same payload the desktop and macOS releases ship: assets/ without the
-// original music, and the git-tracked Data JSONs. Game data is not here - the
-// player extracts that from their own install and copies it in.
 tasks.register('stageAssets', Copy) {
     into stagedAssets
     from("${repoRoot}/assets") {
         into 'assets'
         exclude 'Original Music/**'
     }
-    // Exactly the files `git ls-files Data/` lists. A recursive glob here also
-    // catches the overlay manifests a local extraction generates, which are
-    // large, untracked, and not ours to ship.
     from("${repoRoot}/Data") {
         into 'Data'
         include 'expansions/*/dbc_layouts.json'
@@ -81,9 +65,6 @@ android {
 
     defaultConfig {
         applicationId 'com.wowee.client'
-        // 33 is the floor: Android's libvulkan exports vkWaitSemaphores,
-        // vkCreateRenderPass2 and the two vkGetDevice*MemoryRequirements only
-        // from 33. See docs/plan-android.md.
         minSdk 33
         targetSdk 34
         versionCode gitVersionCode
@@ -109,9 +90,6 @@ android {
     }
 
     sourceSets.main.assets.srcDirs = [stagedAssets]
-    // The music is the project's own and is git-tracked, but the release
-    // archives leave it out, so the release APK does too. A debug build is what
-    // a desktop build directory is: everything, music included.
     sourceSets.debug.assets.srcDirs = [stagedMusic]
 
     buildTypes {
@@ -126,9 +104,6 @@ android {
     }
 }
 
-// Everything that reads the staged assets has to be told where they come from.
-// Merging is the obvious one; lint and packaging read the same directory, and
-// the release build failed on exactly that with no ordering between them.
 tasks.configureEach { t ->
     if (t.name == 'stageAssets' || t.name == 'stageMusic') return
 
@@ -141,15 +116,9 @@ tasks.configureEach { t ->
     if (!readsAssets) return
 
     t.dependsOn 'stageAssets'
-    // The music is a debug-only source set, so only debug tasks wait for it.
     if (n.contains('Debug')) t.dependsOn 'stageMusic'
 }
 
-// SDLActivity and its eight siblings are Java, so they cannot come out of the
-// native build; they are committed here. They must still match the SDL that
-// CMakeLists.txt fetches, because a mismatched pair fails at runtime with a
-// missing native method and nothing at build time. This compares the two once
-// the fetch has happened.
 tasks.register('checkSdlJava') {
     doLast {
         def fetched = fileTree(file('.cxx')) { include '**/sdl2-src/android-project/app/src/main/java/org/libsdl/app/*.java' }
