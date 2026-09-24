@@ -1,14 +1,13 @@
-name: Compilar APK de WoWee
+name: Compilar APK de WoWee (Android Solo)
 
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-android:
+    name: Compilar APK para Celular
     runs-on: ubuntu-latest
 
     steps:
@@ -42,33 +41,22 @@ jobs:
         chmod -R +x tools/ || true
         chmod -R +x android/ || true
 
-    - name: Compilar APK de Depuración (Debug)
+    - name: Compilar APK con Gradle
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
         
-        # Exportamos las variables absolutas en el sistema operativo Linux para blindar a CMake
-        export OPENSSL_ROOT_DIR="$OPENSSL_DIR"
-        export OPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include"
-        export OPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a"
-        export OPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a"
-        export OPENSSL_USE_STATIC_LIBS=TRUE
+        # 🔥 EL TRUCO DEFINITIVO: Borramos por la fuerza la carpeta de cache nativa corrupta de Android Studio
+        rm -rf app/.cxx/
         
         ./gradlew clean
-        # Pasamos las mismas variables directo a Gradle combinadas con las del entorno anterior
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false" \
-          -DOPENSSL_ROOT_DIR="$OPENSSL_DIR" \
-          -DOPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include" \
-          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a" \
-          -DOPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a" \
-          -DOPENSSL_USE_STATIC_LIBS=TRUE
+          "-Pandroid.injected.build.model.only=false"
 
-    - name: Subir la APK resultante a GitHub
+    - name: Guardar y Descargar APK (Artifact)
       uses: actions/upload-artifact@v4
       with:
         name: wowee-debug-apk
