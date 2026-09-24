@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 
 // OpenSSL is built once per ABI by tools/build-android-deps.sh and handed to
 // CMake the way the desktop and macOS builds hand it theirs.
-def opensslFor = { abi -> file("${rootDir}/${opensslRoot}/${abi}").absolutePath }
+def opensslFor = { abi -> file("${rootDir}/openssl/${abi}").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
 
