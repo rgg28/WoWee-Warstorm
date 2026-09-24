@@ -36,15 +36,15 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Engañar la Ruta Nativa de OpenSSL (Solución Definitiva)
+    - name: Engañar la Ruta Nativa de OpenSSL (Solución de Ruta Dinámica)
       run: |
-        # Creamos la carpeta exacta que el build.gradle busca de forma interna por defecto
-        mkdir -p build-android-deps/arm64-v8a
+        # Creamos la carpeta exacta usando la variable de espacio de trabajo para evitar fallos de mayúsculas
+        mkdir -p ${{ github.workspace }}/build-android-deps/arm64-v8a
         
         # Copiamos tus archivos fisicos de OpenSSL con sus cabeceras a la ruta esperada
-        cp -r android/openssl/include build-android-deps/arm64-v8a/
-        cp android/openssl/arm64-v8a/*.a build-android-deps/arm64-v8a/ || true
-        cp android/openssl/arm64-v8a/*.so build-android-deps/arm64-v8a/ || true
+        cp -r ${{ github.workspace }}/android/openssl/include ${{ github.workspace }}/build-android-deps/arm64-v8a/
+        cp ${{ github.workspace }}/android/openssl/arm64-v8a/*.a ${{ github.workspace }}/build-android-deps/arm64-v8a/ || true
+        cp ${{ github.workspace }}/android/openssl/arm64-v8a/*.so ${{ github.workspace }}/build-android-deps/arm64-v8a/ || true
 
     - name: Forzar Permisos Totales en Linux
       run: |
