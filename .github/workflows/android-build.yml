@@ -36,16 +36,6 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Engañar la Ruta Nativa de OpenSSL (Solución de Ruta Dinámica)
-      run: |
-        # Creamos la carpeta exacta usando la variable de espacio de trabajo para evitar fallos de mayúsculas
-        mkdir -p ${{ github.workspace }}/build-android-deps/arm64-v8a
-        
-        # Copiamos tus archivos fisicos de OpenSSL con sus cabeceras a la ruta esperada
-        cp -r ${{ github.workspace }}/android/openssl/include ${{ github.workspace }}/build-android-deps/arm64-v8a/
-        cp ${{ github.workspace }}/android/openssl/arm64-v8a/*.a ${{ github.workspace }}/build-android-deps/arm64-v8a/ || true
-        cp ${{ github.workspace }}/android/openssl/arm64-v8a/*.so ${{ github.workspace }}/build-android-deps/arm64-v8a/ || true
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -58,10 +48,25 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
+        OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
+        
+        # Exportamos las variables absolutas en el sistema operativo Linux para blindar a CMake
+        export OPENSSL_ROOT_DIR="$OPENSSL_DIR"
+        export OPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include"
+        export OPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a"
+        export OPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a"
+        export OPENSSL_USE_STATIC_LIBS=TRUE
+        
         ./gradlew clean
+        # Pasamos las mismas variables directo a Gradle combinadas con las del entorno anterior
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false"
+          "-Pandroid.injected.build.model.only=false" \
+          -DOPENSSL_ROOT_DIR="$OPENSSL_DIR" \
+          -DOPENSSL_INCLUDE_DIR="$OPENSSL_DIR/include" \
+          -DOPENSSL_CRYPTO_LIBRARY="$OPENSSL_DIR/arm64-v8a/libcrypto.a" \
+          -DOPENSSL_SSL_LIBRARY="$OPENSSL_DIR/arm64-v8a/libssl.a" \
+          -DOPENSSL_USE_STATIC_LIBS=TRUE
 
     - name: Subir la APK resultante a GitHub
       uses: actions/upload-artifact@v4
