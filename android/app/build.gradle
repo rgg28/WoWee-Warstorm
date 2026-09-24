@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-// Apuntamos la funcion directamente a la ruta fija global donde estan tus archivos fisicos reales subidos
+// Se define la ruta absoluta fija global de la máquina virtual para OpenSSL en Android
 def opensslFor = { abi -> file("/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl").absolutePath }
 
 def repoRoot = file("${rootDir}/..")
@@ -104,6 +104,12 @@ android {
     }
 }
 
+// 🛠️ ENLAZAMOS TU ARCHIVO .AAR PRECOMPILADO DESDE LA RAÍZ DE APP
+dependencies {
+    // Lee directamente el archivo precompilado que subiste junto a este build.gradle
+    implementation files('SDL3-3.4.16.aar')
+}
+
 tasks.configureEach { t ->
     if (t.name == 'stageAssets' || t.name == 'stageMusic') return
 
@@ -118,31 +124,3 @@ tasks.configureEach { t ->
     t.dependsOn 'stageAssets'
     if (n.contains('Debug')) t.dependsOn 'stageMusic'
 }
-
-tasks.register('checkSdlJava') {
-    doLast {
-        def fetched = fileTree(file('.cxx')) { include '**/sdl2-src/android-project/app/src/main/java/org/libsdl/app/*.java' }
-                        .files.collectEntries { [(it.name): it] }
-        if (fetched.isEmpty()) {
-            logger.lifecycle('checkSdlJava: SDL not fetched yet, nothing compared.')
-            return
-        }
-        def committed = file('src/main/java/org/libsdl/app')
-        def drifted = []
-        fetched.each { name, src ->
-            def mine = new File(committed, name)
-            if (!mine.isFile() || mine.text != src.text) drifted << name
-        }
-        def extra = (committed.list() ?: []).findAll { it.endsWith('.java') && !fetched.containsKey(it) }
-        if (drifted || extra) {
-            throw new GradleException(
-                "android/app/src/main/java/org/libsdl/app is out of step with the SDL " +
-                "that CMakeLists.txt fetches.\n" +
-                (drifted ? "  differ or missing: ${drifted.sort().join(', ')}\n" : '') +
-                (extra   ? "  no longer in SDL:  ${extra.sort().join(', ')}\n" : '') +
-                "Re-copy them from the fetched android-project tree under app/.cxx.")
-        }
-        logger.lifecycle("checkSdlJava: ${fetched.size()} files match the fetched SDL.")
-    }
-}
-tasks.configureEach { if (name == 'compileDebugJavaWithJavac' || name == 'compileReleaseJavaWithJavac') finalizedBy 'checkSdlJava' }
