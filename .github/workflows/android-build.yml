@@ -36,9 +36,9 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Parchear CMakeLists.txt para OpenSSL de Android (Solución de Ruta Absoluta)
+    - name: Parchear CMakeLists.txt para OpenSSL de Android
       run: |
-        # Definimos la ruta absoluta total para que Ninja no se pierda al buscar libssl y libcrypto
+        # Definimos la ruta absoluta total para que Ninja no use ../../../
         OPENSSL_DIR="/home/runner/work/WoWee-Warstorm/WoWee-Warstorm/android/openssl"
         
         PARCHE_ALIAS="set(OPENSSL_INCLUDE_DIR \"${OPENSSL_DIR}/include\")\n\
@@ -69,6 +69,8 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
+        # Forzamos una limpieza total de las carpetas de caché .cxx de CMake antes de compilar
+        ./gradlew clean
         ./gradlew assembleDebug --no-daemon
 
     - name: Subir la APK resultante a GitHub
