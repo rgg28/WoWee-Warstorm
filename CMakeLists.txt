@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(wowee VERSION 1.0.0 LANGUAGES C CXX)
 include(GNUInstallDirs)
+include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -38,22 +39,32 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
+# 🛠️ DESCARGA AUTOMÁTICA Y NATIVA DE SDL3 PARA ANDROID
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com
+    GIT_TAG        main
+)
+set(SDL_SHARED ON CACHE BOOL "" FORCE)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+set(SDL_TEST   OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(SDL3)
+
 # Compilación limpia de la librería nativa principal de WoWee para Android Studio
 add_library(wowee SHARED
     src/main.cpp
 )
 
-# Mapeamos los directorios de inclusión nativos del motor, submódulos e incluye de SDL3
+# Mapeamos los directorios de inclusión nativos del motor y sub-módulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
-    ${CMAKE_BINARY_DIR}/_deps/sdl3-src/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/android/app/.cxx/Debug/g1p334i5/arm64-v8a/_deps/sdl3-src/include
 )
 
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
+    SDL3::SDL3
 )
