@@ -35,14 +35,22 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descomprimir Librería GLM de Forma Nativa
+    - name: Descomprimir y Corregir Ruta de GLM (Solución Definitiva)
       run: |
-        # Forzamos la instalación de la herramienta unzip en el servidor Linux
+        # Aseguramos la instalación de unzip en el servidor Linux
         sudo apt-get update && sudo apt-get install -y unzip
         
-        # Descomprimimos directamente tu archivo glm.zip en la carpeta extern/
-        # Al traer la carpeta interna 'glm', se creará automáticamente la estructura física extern/glm/
-        unzip -q extern/glm.zip -d extern/
+        # 1. Descomprimimos el archivo glm.zip completo en una carpeta temporal limpia
+        mkdir -p temporal_glm
+        unzip -q extern/glm.zip -d temporal_glm
+        
+        # 2. Creamos la carpeta destino exacta que el motor del juego busca
+        mkdir -p extern/glm
+        
+        # 3. Buscamos de forma automatica la posicion de la carpeta hpp interna y movemos sus archivos a la ruta final
+        # Esto soluciona de raiz el problema de si la carpeta se llama glm-master o similar
+        CP_DIR=$(find temporal_glm -type d -name "glm" | head -n 1)
+        cp -r ${CP_DIR}/* extern/glm/ || true
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -56,7 +64,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
       run: |
         cd android
-        # Borramos la cache nativa para limpiar los residuos del intento fallido anterior
+        # Borramos la cache nativa para limpiar los rastros del intento fallido anterior
         rm -rf app/.cxx/
         ./gradlew clean
         ./gradlew assembleDebug --no-daemon \
