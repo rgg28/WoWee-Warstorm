@@ -1,0 +1,62 @@
+name: Compilar APK de WoWee
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Configurar Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Configurar Variables del SDK de Android
+      run: |
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> $GITHUB_ENV
+
+    - name: Aceptar Licencias de Android
+      run: |
+        yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+    - name: Instalar versión exacta de NDK y CMake
+      run: |
+        /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
+
+    - name: Parchear CMakeLists.txt para OpenSSL de Android
+      run: |
+        OPENSSL_DIR="${{ github.workspace }}/android/openssl"
+        sed -i "s|find_package(OpenSSL REQUIRED)|set(OPENSSL_INCLUDE_DIR \"${OPENSSL_DIR}/include\")\nset(OPENSSL_CRYPTO_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libcrypto.a\")\nset(OPENSSL_SSL_LIBRARY \"${OPENSSL_DIR}/arm64-v8a/libssl.a\")\nset(OPENSSL_LIBRARIES \${OPENSSL_CRYPTO_LIBRARY} \${OPENSSL_SSL_LIBRARY})\nset(OpenSSL_FOUND TRUE)|g" CMakeLists.txt
+
+    - name: Forzar Permisos Totales en Linux
+      run: |
+        find . -type f -name "*.sh" -exec chmod +x {} + || true
+        chmod -R +x tools/ || true
+        chmod -R +x android/ || true
+
+    - name: Compilar APK de Depuración (Debug)
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
+      run: |
+        cd android
+        ./gradlew assembleDebug --no-daemon
+
+    - name: Subir la APK resultante a GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: wowee-debug-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
