@@ -59,6 +59,13 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
+        # 🔥 SOLUCIÓN PARA VULKAN EN ANDROID:
+        # Vaciamos el archivo de despacho avanzado de vk-bootstrap para evitar conflictos con cabeceras nativas
+        if [ -f "extern/vk-bootstrap/src/VkBootstrapDispatch.h" ]; then
+          echo "" > extern/vk-bootstrap/src/VkBootstrapDispatch.h
+          echo "¡VkBootstrapDispatch.h parcheado con éxito!"
+        fi
+
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -69,10 +76,8 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # 🔥 LIMITACIÓN DE MEMORIA Y HILOS:
-        # Evita que el servidor gratuito de GitHub mate el proceso por falta de RAM (Crash Silencioso)
+        # Limitación de memoria y recursos para evitar cuelgues del servidor
         GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
-        # Limita a CMake/Ninja a usar un máximo de 2 hilos para compilar los archivos .cpp nativos
         CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
         cd android
