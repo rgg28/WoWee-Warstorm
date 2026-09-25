@@ -62,6 +62,7 @@ add_library(wowee SHARED
 # Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern             # 👈 AQUÍ ESTÁ EL CAMBIO: Permite encontrar miniaudio.h de forma global
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
@@ -71,5 +72,5 @@ target_include_directories(wowee PUBLIC
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3::SDL3     # 👈 Enlace directo al módulo de SDL3 extraído arriba
+    SDL3::SDL3     
 )
