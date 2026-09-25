@@ -49,7 +49,7 @@ jobs:
         mkdir -p include
         mkdir -p android/sdl3/arm64-v8a
         
-        # 3. 🔍 DESCOMPRIMIR TU ARCHIVO SDL3.ZIP
+        # 3. DESCOMPRIMIR TU ARCHIVO SDL3.ZIP
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
         
         # 4. Mover cada elemento a su ubicación exacta para el compilador
@@ -69,6 +69,11 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
+        # 🔥 LIMITACIÓN DE MEMORIA Y HILOS:
+        # Evita que el servidor gratuito de GitHub mate el proceso por falta de RAM (Crash Silencioso)
+        GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
+        # Limita a CMake/Ninja a usar un máximo de 2 hilos para compilar los archivos .cpp nativos
+        CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
         cd android
         rm -rf app/.cxx/
