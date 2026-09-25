@@ -38,7 +38,10 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# 🔍 NUEVO: Escanear recursivamente todos los archivos .cpp y .c dentro de la carpeta src/
+# 📦 NUEVO: Encontrar SDL3 automáticamente desde el paquete extraído por Gradle Prefab
+find_package(SDL3 REQUIRED CONFIG)
+
+# Escanear recursivamente todos los archivos .cpp y .c dentro de la carpeta src/
 file(GLOB_RECURSE WOWEE_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
@@ -57,7 +60,9 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
 )
 
+# Enlazamos las librerías al binario principal de wowee
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
+    SDL3::SDL3   # 👈 NUEVO: Enlaza el paquete nativo oficial extraído del .aar
 )
