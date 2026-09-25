@@ -1,7 +1,6 @@
 name: Compilar APK de WoWee (Android Solo)
 
 on:
-  on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
@@ -71,11 +70,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # 🔥 RESTRICCIÓN MÁXIMA DE RAM:
-        # Forzamos a Gradle y Java a consumir el mínimo posible
+        # Restricción estricta de RAM para el entorno Java de Gradle
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # 🔥 UN SOLO HILO PARA C++:
-        # Obliga a Ninja a compilar un solo archivo a la vez para que la RAM no se sature nunca
+        # Forzamos compilación nativa en un solo hilo para evitar cuelgues por falta de memoria RAM
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
