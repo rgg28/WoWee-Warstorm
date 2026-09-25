@@ -37,7 +37,7 @@ jobs:
 
     - name: Descomprimir Librerías (GLM y SDL3)
       run: |
-        sudo apt-get update && sudo apt-get install -y unzip
+        sudo apt-get update && sudo apt-get install -y unzip curl
         
         # 1. Descomprimir GLM en la carpeta include/
         rm -rf include/glm
@@ -59,12 +59,19 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # 🔥 SOLUCIÓN PARA VULKAN EN ANDROID:
-        # Vaciamos el archivo de despacho avanzado de vk-bootstrap para evitar conflictos con cabeceras nativas
-        if [ -f "extern/vk-bootstrap/src/VkBootstrapDispatch.h" ]; then
-          echo "" > extern/vk-bootstrap/src/VkBootstrapDispatch.h
-          echo "¡VkBootstrapDispatch.h parcheado con éxito!"
-        fi
+        # 🔥 DESCARGA AUTOMÁTICA DE VK-BOOTSTRAP V0.7 COMPATIBLE:
+        # Purgamos la carpeta actual y bajamos los archivos estables para evitar errores de Vulkan en Android
+        echo "Descargando automáticamente vk-bootstrap v0.7..."
+        rm -rf extern/vk-bootstrap
+        mkdir -p extern/vk-bootstrap/src
+        
+        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrap.h
+        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrapDispatch.h
+        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrap.cpp
+        
+        # Creamos un archivo vacío simulado (mock) para evitar fallos de escaneo recursivo en tu CMakeLists.txt
+        echo "#pragma once" > extern/vk-bootstrap/src/VkBootstrapFeatureChain.h
+        echo "¡vk-bootstrap v0.7 descargado y listo!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -76,7 +83,7 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Limitación de memoria y recursos para evitar cuelgues del servidor
+        # Control estricto de memoria para que el runner de GitHub no sufra muertes silenciosas
         GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
         CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
