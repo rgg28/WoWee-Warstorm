@@ -58,7 +58,20 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-        echo "¡Librerías locales descomprimidas con éxito!"
+
+        # 🔥 SOLUCIÓN GENERACIÓN DE CONFIGURATION.H EN OPENSSL:
+        # Creamos de forma dinámica el archivo faltante con las macros estándar para arm64 nativo
+        echo "Generando openssl/configuration.h simulado..."
+        cat << 'EOF' > android/openssl/include/openssl/configuration.h
+        #ifndef OPENSSL_CONFIGURATION_H
+        #define OPENSSL_CONFIGURATION_H
+        #define OPENSSL_MIN_API 0x30000000L
+        #ifndef OPENSSL_NO_ASYNC
+        # define OPENSSL_NO_ASYNC
+        #endif
+        #endif
+        EOF
+        echo "¡configuration.h inyectado con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -70,9 +83,8 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección estricta de memoria RAM para evitar que el servidor gratuito de GitHub se caiga
+        # Control estricto de memoria RAM para evitar que el servidor gratuito de GitHub colapse
         GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
-        # Limita al compilador nativo (CMake/Ninja) a usar máximo 2 hilos en paralelo
         CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
         cd android
