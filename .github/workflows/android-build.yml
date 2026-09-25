@@ -35,17 +35,29 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Preparar Librerías (GLM y SDL3)
+    - name: Descomprimir Librerías (GLM y SDL3)
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         
-        # 1. Descomprimir GLM
+        # 1. Descomprimir GLM en la carpeta include/
         rm -rf include/glm
         unzip -q extern/glm.zip -d include/
         
-        # 2. 🔍 NUEVO: Extraer manualmente SDL3 para que CMake lo encuentre al instante
-        rm -rf android/sdl3_extracted
-        unzip -q android/app/SDL3-3.4.16.aar -d android/sdl3_extracted/
+        # 2. Preparar carpetas limpias para SDL3
+        rm -rf include/SDL3
+        rm -rf android/sdl3
+        mkdir -p include
+        mkdir -p android/sdl3/arm64-v8a
+        
+        # 3. 🔍 DESCOMPRIMIR TU ARCHIVO SDL3.ZIP
+        unzip -q extern/SDL3.zip -d android/sdl3_temp/
+        
+        # 4. Mover cada elemento a su ubicación exacta para el compilador
+        mv android/sdl3_temp/SDL3 include/
+        mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
+        
+        # Limpiar carpeta temporal
+        rm -rf android/sdl3_temp/
 
     - name: Forzar Permisos Totales en Linux
       run: |
