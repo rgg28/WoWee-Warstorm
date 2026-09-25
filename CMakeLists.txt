@@ -38,9 +38,15 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# Compilación limpia de la librería nativa principal de WoWee para Android Studio
+# 🔍 NUEVO: Escanear recursivamente todos los archivos .cpp y .c dentro de la carpeta src/
+file(GLOB_RECURSE WOWEE_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+)
+
+# Compilación de la librería nativa principal usando la lista automática de archivos encontrados
 add_library(wowee SHARED
-    src/main.cpp
+    ${WOWEE_SOURCES}
 )
 
 # Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
