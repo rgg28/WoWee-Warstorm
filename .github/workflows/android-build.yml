@@ -37,7 +37,7 @@ jobs:
 
     - name: Descomprimir Librerías (GLM y SDL3)
       run: |
-        sudo apt-get update && sudo apt-get install -y unzip curl
+        sudo apt-get update && sudo apt-get install -y unzip
         
         # 1. Descomprimir GLM en la carpeta include/
         rm -rf include/glm
@@ -59,19 +59,17 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # 🔥 DESCARGA AUTOMÁTICA DE VK-BOOTSTRAP V0.7 COMPATIBLE:
-        # Purgamos la carpeta actual y bajamos los archivos estables para evitar errores de Vulkan en Android
-        echo "Descargando automáticamente vk-bootstrap v0.7..."
+        # 🔥 SOLUCIÓN ANTIBLOQUEO DE RED: CLONACIÓN LOCAL INMUNE A ERRORES DE CURL
+        # Purgamos la carpeta previa conflictiva
         rm -rf extern/vk-bootstrap
-        mkdir -p extern/vk-bootstrap/src
         
-        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrap.h
-        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrapDispatch.h
-        curl -sL https://githubusercontent.com -o extern/vk-bootstrap/src/VkBootstrap.cpp
+        # Clonamos de forma ultraligera (--depth 1) la etiqueta exacta v0.7 usando Git
+        echo "Clonando vk-bootstrap v0.7 de forma nativa..."
+        git clone --depth 1 --branch v0.7 https://github.com extern/vk-bootstrap
         
-        # Creamos un archivo vacío simulado (mock) para evitar fallos de escaneo recursivo en tu CMakeLists.txt
+        # Creamos el archivo simulado vacío que pide tu CMakeLists.txt para asegurar el escaneo recursivo sin fallos
         echo "#pragma once" > extern/vk-bootstrap/src/VkBootstrapFeatureChain.h
-        echo "¡vk-bootstrap v0.7 descargado y listo!"
+        echo "¡vk-bootstrap v0.7 clonado y estructurado con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
