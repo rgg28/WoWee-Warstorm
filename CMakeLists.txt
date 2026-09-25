@@ -38,15 +38,13 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# 📦 MAPEO SEGURO DE SDL3 DESDE LA EXTRACCIÓN DEL SCRIPT DE GITHUB ACTIONS
-set(SDL3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3_extracted/prefab/modules/SDL3/include")
-set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3_extracted/prefab/modules/SDL3/libs/android.arm64-v8a/libSDL3.so")
+# 📦 MAPEO DE SDL3 (UBICACIONES PROVISTAS POR EL SCRIPT DE ACTIONS)
+set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3/arm64-v8a/libSDL3.so")
 
 if(NOT TARGET SDL3::SDL3)
   add_library(SDL3::SDL3 SHARED IMPORTED)
   set_target_properties(SDL3::SDL3 PROPERTIES 
-    IMPORTED_LOCATION "${SDL3_LIBRARY}" 
-    INTERFACE_INCLUDE_DIRECTORIES "${SDL3_INCLUDE_DIR}"
+    IMPORTED_LOCATION "${SDL3_LIBRARY}"
   )
 endif()
 
@@ -73,5 +71,5 @@ target_include_directories(wowee PUBLIC
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3::SDL3     # 👈 Enlace directo al target de SDL3 configurado arriba
+    SDL3::SDL3     # 👈 Enlace directo al módulo de SDL3 extraído arriba
 )
