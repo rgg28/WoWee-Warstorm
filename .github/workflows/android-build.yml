@@ -37,7 +37,7 @@ jobs:
 
     - name: Descomprimir Librerías (GLM y SDL3)
       run: |
-        sudo apt-get update && sudo apt-get install -y unzip
+        sudo apt-get update && sudo apt-get install -y unzip wget
         
         # 1. Descomprimir GLM en la carpeta include/
         rm -rf include/glm
@@ -58,24 +58,21 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-        echo "¡Librerías locales descomprimidas!"
 
-    # 🔥 PASO INDEPENDIENTE PARA PARCHEAR OPENSSL 3.0:
-    # Creamos el archivo configuration.h justo en la ruta donde el compilador nativo lo va a buscar
-    - name: Inyectar archivo de configuración OpenSSL
-      run: |
-        echo "Fabricando openssl/configuration.h..."
-        mkdir -p android/openssl/include/openssl
-        cat << 'EOF' > android/openssl/include/openssl/configuration.h
-        #ifndef OPENSSL_CONFIGURATION_H
-        #define OPENSSL_CONFIGURATION_H
-        #define OPENSSL_MIN_API 0x30000000L
-        #ifndef OPENSSL_NO_ASYNC
-        # define OPENSSL_NO_ASYNC
-        #endif
-        #endif
-        EOF
-        echo "¡Archivo de configuración inyectado correctamente!"
+        # 🔥 SOLUCIÓN DEFINITIVA DE CABECERAS OPENSSL 3.0:
+        # Descargamos el paquete preconfigurado de KDAB para Android e instalamos todas las cabeceras .h reales
+        echo "Descargando e inyectando paquete de cabeceras OpenSSL 3.0 de KDAB..."
+        wget -q https://github.com -O openssl_kdab.zip
+        unzip -q openssl_kdab.zip -d openssl_temp
+        
+        # Purgamos la carpeta include/openssl vieja que daba errores y movemos la oficial completa
+        rm -rf android/openssl/include/openssl
+        mkdir -p android/openssl/include
+        mv openssl_temp/android_openssl-master/include/openssl android/openssl/include/
+        
+        # Limpiamos los archivos temporales generados
+        rm -rf openssl_temp openssl_kdab.zip
+        echo "¡Ecosistema de OpenSSL 3.0 completamente equilibrado y listo!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -87,9 +84,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM
+        # Protección estricta de memoria RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Mantenemos un hilo de C++ para evitar muertes silenciosas por falta de memoria RAM
+        # Mantenemos un hilo de C++ para evitar cuelgues silenciosos
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
