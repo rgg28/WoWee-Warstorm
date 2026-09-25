@@ -58,7 +58,7 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-        echo "¡Librerías locales GLM y SDL3 listas!"
+        echo "¡Librerías locales descomprimidas con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -70,10 +70,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # 🔥 CONTROL DE MEMORIA ESTRICTO: 
-        # Restringe Gradle a 2GB de RAM para evitar muertes silenciosas del runner
+        # Protección estricta de memoria RAM para evitar que el servidor gratuito de GitHub se caiga
         GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
-        # Limita al compilador nativo (CMake/Ninja) a usar máximo 2 hilos para compilar el código C++
+        # Limita al compilador nativo (CMake/Ninja) a usar máximo 2 hilos en paralelo
         CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
         cd android
