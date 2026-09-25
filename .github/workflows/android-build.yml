@@ -35,11 +35,17 @@ jobs:
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descomprimir Librería GLM dentro de Include
+    - name: Preparar Librerías (GLM y SDL3)
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
+        
+        # 1. Descomprimir GLM
         rm -rf include/glm
         unzip -q extern/glm.zip -d include/
+        
+        # 2. 🔍 NUEVO: Extraer manualmente SDL3 para que CMake lo encuentre al instante
+        rm -rf android/sdl3_extracted
+        unzip -q android/app/SDL3-3.4.16.aar -d android/sdl3_extracted/
 
     - name: Forzar Permisos Totales en Linux
       run: |
