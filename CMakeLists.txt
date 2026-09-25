@@ -59,13 +59,21 @@ add_library(wowee SHARED
     ${WOWEE_SOURCES}
 )
 
+# 🔄 ESCANEO RECURSIVO AUTOMÁTICO DE SUBDIRECTORIOS EN EXTERN
+file(GLOB_RECURSE EXTERN_ITEMS LIST_DIRECTORIES true "${CMAKE_CURRENT_SOURCE_DIR}/extern/*")
+
+set(AUTOMATIC_EXTERN_INCLUDES "")
+foreach(ITEM ${EXTERN_ITEMS})
+    if(IS_DIRECTORY ${ITEM})
+        list(APPEND AUTOMATIC_EXTERN_INCLUDES ${ITEM})
+    endif()
+endforeach()
+
 # Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern             # 👈 AQUÍ ESTÁ EL CAMBIO: Permite encontrar miniaudio.h de forma global
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern
+    ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Añade dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
 )
 
 # Enlazamos las librerías nativas al ejecutable/librería principal
