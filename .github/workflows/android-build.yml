@@ -37,7 +37,7 @@ jobs:
 
     - name: Descomprimir Librerías (GLM y SDL3)
       run: |
-        sudo apt-get update && sudo apt-get install -y unzip wget
+        sudo apt-get update && sudo apt-get install -y unzip
         
         # 1. Descomprimir GLM en la carpeta include/
         rm -rf include/glm
@@ -58,27 +58,7 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-
-        # 🔥 SOLUCIÓN DEFINITIVA DE DESCARGA: DESCOMPRESIÓN DE RELEASE V0.7 DIRECTA
-        echo "Descargando paquete oficial vk-bootstrap v0.7..."
-        rm -rf extern/vk-bootstrap
-        
-        # Descargamos el archivo zip fuente de la versión estable v0.7
-        wget -q https://github.com -O vk-bootstrap-0.7.zip
-        
-        # Descomprimimos en una carpeta temporal
-        unzip -q vk-bootstrap-0.7.zip -d vkb_temp
-        
-        # Estructuramos la carpeta exactamente como la busca tu CMakeLists.txt
-        mkdir -p extern/vk-bootstrap/src
-        mv vkb_temp/vk-bootstrap-0.7/src/* extern/vk-bootstrap/src/
-        
-        # Creamos el archivo simulado vacío que pide tu CMakeLists.txt para el escaneo recursivo sin fallos
-        echo "#pragma once" > extern/vk-bootstrap/src/VkBootstrapFeatureChain.h
-        
-        # Limpiamos archivos temporales de descarga
-        rm -rf vkb_temp vk-bootstrap-0.7.zip
-        echo "¡vk-bootstrap v0.7 estructurado con éxito!"
+        echo "¡Librerías locales GLM y SDL3 listas!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -90,8 +70,10 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Control estricto de memoria para que el runner de GitHub no sufra muertes silenciosas
+        # 🔥 CONTROL DE MEMORIA ESTRICTO: 
+        # Restringe Gradle a 2GB de RAM para evitar muertes silenciosas del runner
         GRADLE_OPTS: "-Xmx2048m -Dorg.gradle.workers.max=1"
+        # Limita al compilador nativo (CMake/Ninja) a usar máximo 2 hilos para compilar el código C++
         CMAKE_BUILD_PARALLEL_LEVEL: "2"
       run: |
         cd android
