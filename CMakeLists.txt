@@ -29,10 +29,10 @@ add_compile_definitions(VK_BOOTSTRAP_DISABLE_DISPATCH_TABLE=1)
 # Permite utilizar las extensiones de cuaterniones y funciones matemáticas en game_handler_callbacks.cpp
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL=1)
 
-# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1)
+# 🛠️ MAPEO DE OPENSSL DINÁMICO (Actualizado a OpenSSL 3.0)
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
-set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.so.1.1")
-set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.so.1.1")
+set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto_3.so") # 👈 Actualizado con _3
+set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl_3.so")       # 👈 Actualizado con _3
 set(OPENSSL_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 set(OpenSSL_FOUND TRUE)
 
