@@ -58,35 +58,22 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-        echo "¡Librerías locales descomprimidas!"
 
-    # 🔥 PARCHE LOCAL OPENSSL 3.0 INMUNE A CAÍDAS DE RED:
-    - name: Inyectar archivos de configuración y versión de OpenSSL
-      run: |
-        echo "Fabricando archivos de configuración de OpenSSL..."
-        mkdir -p android/openssl/include/openssl
+        # 🔥 SOLUCIÓN DEFINITIVA DE CABECERAS OPENSSL 3.0 MEDIANTE CLONACIÓN DE GIT:
+        # Purgamos la carpeta include/openssl inestable y conflictiva
+        rm -rf android/openssl/include/openssl
+        mkdir -p android/openssl/include
         
-        cat << 'EOF' > android/openssl/include/openssl/configuration.h
-        #ifndef OPENSSL_CONFIGURATION_H
-        #define OPENSSL_CONFIGURATION_H
-        #define OPENSSL_MIN_API 0x30000000L
-        #ifndef OPENSSL_NO_ASYNC
-        # define OPENSSL_NO_ASYNC
-        #endif
-        #endif
-        EOF
-
-        cat << 'EOF' > android/openssl/include/openssl/opensslv.h
-        #ifndef OPENSSL_OPENSSLV_H
-        #define OPENSSL_OPENSSLV_H
-        #define OPENSSL_VERSION_MAJOR  3
-        #define OPENSSL_VERSION_MINOR  0
-        #define OPENSSL_VERSION_PATCH  22
-        #define OPENSSL_VERSION_NUMBER 0x3001016fL
-        #define OPENSSL_VERSION_TEXT   "OpenSSL 3.0.22 25 Sep 2026"
-        #endif
-        EOF
-        echo "¡Archivos configuration.h y opensslv.h inyectados con éxito!"
+        # Clonamos de forma ultraligera el repositorio de KDAB para extraer sus cabeceras oficiales testeadas en Android
+        echo "Clonando repositorio oficial de KDAB para sincronizar cabeceras de OpenSSL 3.0..."
+        git clone --depth 1 https://github.com openssl_kdab_repo
+        
+        # Movemos la carpeta completa de includes verificados y con soporte para arm64 a la ruta de tu proyecto
+        mv openssl_kdab_repo/include/openssl android/openssl/include/
+        
+        # Limpiamos los archivos clonados sobrantes
+        rm -rf openssl_kdab_repo
+        echo "¡Ecosistema completo de OpenSSL 3.0 inyectado con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -100,7 +87,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
         # Protección de RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Un solo hilo para C++ para evitar cuelgues por falta de RAM
+        # Mantenemos la compilación en un solo hilo para evitar muertes silenciosas por falta de RAM
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
