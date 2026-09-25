@@ -59,21 +59,27 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # 🔥 SOLUCIÓN DEFINITIVA DE CABECERAS OPENSSL 3.0 MEDIANTE CLONACIÓN DE GIT:
-        # Purgamos la carpeta include/openssl inestable y conflictiva
+        # 🔥 INYECCIÓN DIRECTA DE LA RUTA DETECTADA (ssl_3/include/openssl):
+        # Purgamos la carpeta inestable vieja que tiene los archivos .h.in
         rm -rf android/openssl/include/openssl
         mkdir -p android/openssl/include
         
-        # Clonamos de forma ultraligera el repositorio de KDAB para extraer sus cabeceras oficiales testeadas en Android
-        echo "Clonando repositorio oficial de KDAB para sincronizar cabeceras de OpenSSL 3.0..."
-        git clone --depth 1 https://github.com openssl_kdab_repo
+        echo "Clonando selectivamente las cabeceras ssl_3 desde KDAB..."
+        mkdir -p repo_kdab_temp
+        cd repo_kdab_temp
+        git init -q
+        git remote add origin https://github.com
+        git config core.sparseCheckout true
+        echo "ssl_3/include/openssl/*" >> .git/info/sparse-checkout
+        git pull -q origin master
         
-        # Movemos la carpeta completa de includes verificados y con soporte para arm64 a la ruta de tu proyecto
-        mv openssl_kdab_repo/include/openssl android/openssl/include/
+        # Movemos la lista completa de archivos .h limpios a la ruta de tu proyecto
+        mv ssl_3/include/openssl ../android/openssl/include/
         
-        # Limpiamos los archivos clonados sobrantes
-        rm -rf openssl_kdab_repo
-        echo "¡Ecosistema completo de OpenSSL 3.0 inyectado con éxito!"
+        # Limpiamos el entorno temporal
+        cd ..
+        rm -rf repo_kdab_temp
+        echo "¡Ecosistema de cabeceras OpenSSL 3 de la ruta ssl_3 sincronizado con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -85,9 +91,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM
+        # Protección de RAM para el runner de GitHub
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Mantenemos la compilación en un solo hilo para evitar muertes silenciosas por falta de RAM
+        # Compilación nativa en un solo hilo para evitar cuelgues del servidor
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
