@@ -59,27 +59,12 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # 🔥 INYECCIÓN DIRECTA DE LA RUTA DETECTADA (ssl_3/include/openssl):
-        # Purgamos la carpeta inestable vieja que tiene los archivos .h.in
-        rm -rf android/openssl/include/openssl
-        mkdir -p android/openssl/include
-        
-        echo "Clonando selectivamente las cabeceras ssl_3 desde KDAB..."
-        mkdir -p repo_kdab_temp
-        cd repo_kdab_temp
-        git init -q
-        git remote add origin https://github.com
-        git config core.sparseCheckout true
-        echo "ssl_3/include/openssl/*" >> .git/info/sparse-checkout
-        git pull -q origin master
-        
-        # Movemos la lista completa de archivos .h limpios a la ruta de tu proyecto
-        mv ssl_3/include/openssl ../android/openssl/include/
-        
-        # Limpiamos el entorno temporal
-        cd ..
-        rm -rf repo_kdab_temp
-        echo "¡Ecosistema de cabeceras OpenSSL 3 de la ruta ssl_3 sincronizado con éxito!"
+        # 🔥 RETROCOMPATIBILIDAD DE ENLAZADO LOCAL:
+        # Copia tu archivo configuration.h limpio a opensslconf.h por si tu motor lo busca con el nombre antiguo
+        if [ -f "android/openssl/include/openssl/configuration.h" ]; then
+          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
+          echo "¡opensslconf.h enlazado correctamente de forma local!"
+        fi
 
     - name: Forzar Permisos Totales en Linux
       run: |
