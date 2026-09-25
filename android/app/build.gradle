@@ -63,6 +63,11 @@ android {
     compileSdk 34
     ndkVersion '28.2.13676358'
 
+    // 🔍 NUEVO: Activa las características de Prefab para desempaquetar librerías .aar nativas como SDL3
+    buildFeatures {
+        prefab true
+    }
+
     defaultConfig {
         applicationId 'com.wowee.client'
         minSdk 33
