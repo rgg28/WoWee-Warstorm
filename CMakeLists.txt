@@ -22,7 +22,7 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
 
-# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1) REAL QUE DESCUBRISTE
+# 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1)
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
 set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto.so.1.1")
 set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl.so.1.1")
@@ -38,14 +38,15 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# 📦 MAPEO MANUAL DEL BINARIO EXTRAÍDO DE SDL3 (AAR)
-# Al compilar, Gradle extrae el contenido del .aar dentro de la carpeta build/intermediates/
-set(SDL3_EXTRACTED_SO "${CMAKE_CURRENT_SOURCE_DIR}/android/app/build/intermediates/prefab_package_libs/debug/prefab/modules/SDL3/libs/android.arm64-v8a/libSDL3.so")
+# 📦 MAPEO SEGURO DE SDL3 DESDE LA EXTRACCIÓN DEL SCRIPT DE GITHUB ACTIONS
+set(SDL3_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3_extracted/prefab/modules/SDL3/include")
+set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3_extracted/prefab/modules/SDL3/libs/android.arm64-v8a/libSDL3.so")
 
 if(NOT TARGET SDL3::SDL3)
   add_library(SDL3::SDL3 SHARED IMPORTED)
-  set_target_properties(SDL3::SDL3 PROPERTIES
-    IMPORTED_LOCATION "${SDL3_EXTRACTED_SO}"
+  set_target_properties(SDL3::SDL3 PROPERTIES 
+    IMPORTED_LOCATION "${SDL3_LIBRARY}" 
+    INTERFACE_INCLUDE_DIRECTORIES "${SDL3_INCLUDE_DIR}"
   )
 endif()
 
@@ -68,9 +69,9 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
 )
 
+# Enlazamos las librerías nativas al ejecutable/librería principal
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3::SDL3     # 👈 Enlazamos el módulo de SDL3 mapeado arriba
+    SDL3::SDL3     # 👈 Enlace directo al target de SDL3 configurado arriba
 )
-
