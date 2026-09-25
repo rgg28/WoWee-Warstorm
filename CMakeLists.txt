@@ -21,6 +21,9 @@ option(WOWEE_ENABLE_AMD_FSR3_FRAMEGEN "Enable AMD FSR3" OFF)
 
 add_compile_definitions(WOWEE_HAS_AMD_FSR2=0)
 add_compile_definitions(WOWEE_HAS_AMD_FSR3_FRAMEGEN=0)
+# 🔥 CORRECCIÓN PARA VULKAN EN ANDROID:
+# Desactiva la tabla de despacho avanzada de VkBootstrap que rompe la compilación por incompatibilidad de cabeceras.
+add_compile_definitions(VK_BOOTSTRAP_DISABLE_DISPATCH_TABLE=1)
 
 # 🛠️ MAPEO DE OPENSSL DINÁMICO (.so.1.1)
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
