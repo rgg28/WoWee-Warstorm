@@ -38,8 +38,17 @@ if(NOT TARGET OpenSSL::SSL)
   set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
-# 📦 NUEVO: Encontrar SDL3 automáticamente desde el paquete extraído por Gradle Prefab
-find_package(SDL3 REQUIRED CONFIG)
+# 📦 MAPEO INTERNO DE SDL3 DESDE LA EXTRACCIÓN PREFAB NATIVA DE GRADLE
+# Prefab extrae automáticamente los .aar nativos dentro de la carpeta build del módulo de la app
+set(SDL3_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/app/.cxx/prefab/debug/arm64-v8a/prefab/modules/SDL3")
+
+if(NOT TARGET SDL3::SDL3)
+  add_library(SDL3::SDL3 SHARED IMPORTED)
+  set_target_properties(SDL3::SDL3 PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/android/app/build/intermediates/prefab_package_libs/debug/prefab/modules/SDL3/libs/android.arm64-v8a/libSDL3.so"
+    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  )
+endif()
 
 # Escanear recursivamente todos los archivos .cpp y .c dentro de la carpeta src/
 file(GLOB_RECURSE WOWEE_SOURCES 
@@ -60,9 +69,8 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src
 )
 
-# Enlazamos las librerías al binario principal de wowee
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3::SDL3   # 👈 NUEVO: Enlaza el paquete nativo oficial extraído del .aar
+    SDL3::SDL3  # 👈 Enlazamos el binario local extraído de SDL3
 )
