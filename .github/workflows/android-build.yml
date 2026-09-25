@@ -58,7 +58,24 @@ jobs:
         
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-        echo "¡Librerías nativas locales listas para compilar!"
+        echo "¡Librerías locales descomprimidas!"
+
+    # 🔥 PASO INDEPENDIENTE PARA PARCHEAR OPENSSL 3.0:
+    # Creamos el archivo configuration.h justo en la ruta donde el compilador nativo lo va a buscar
+    - name: Inyectar archivo de configuración OpenSSL
+      run: |
+        echo "Fabricando openssl/configuration.h..."
+        mkdir -p android/openssl/include/openssl
+        cat << 'EOF' > android/openssl/include/openssl/configuration.h
+        #ifndef OPENSSL_CONFIGURATION_H
+        #define OPENSSL_CONFIGURATION_H
+        #define OPENSSL_MIN_API 0x30000000L
+        #ifndef OPENSSL_NO_ASYNC
+        # define OPENSSL_NO_ASYNC
+        #endif
+        #endif
+        EOF
+        echo "¡Archivo de configuración inyectado correctamente!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -70,9 +87,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Restricción estricta de RAM para el entorno Java de Gradle
+        # Protección de RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Forzamos compilación nativa en un solo hilo para evitar cuelgues por falta de memoria RAM
+        # Mantenemos un hilo de C++ para evitar muertes silenciosas por falta de memoria RAM
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
