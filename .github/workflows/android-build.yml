@@ -1,0 +1,138 @@
+name: Compilar APK de WoWee (Android Solo)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Compilar APK para Celular
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Configurar Java 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Configurar Variables del SDK de Android
+      run: |
+        echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> $GITHUB_ENV
+
+    - name: Aceptar Licencias de Android
+      run: |
+        yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+    - name: Instalar versión exacta NDK y CMake
+      run: |
+        /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
+
+    - name: Descomprimir Librerías (GLM y SDL3)
+      run: |
+        sudo apt-get update && sudo apt-get install -y unzip
+        
+        # 1. Descomprimir GLM en la carpeta include/
+        rm -rf include/glm
+        unzip -q extern/glm.zip -d include/
+        
+        # 2. Preparar carpetas limpias para SDL3
+        rm -rf include/SDL3
+        rm -rf android/sdl3
+        mkdir -p include
+        mkdir -p android/sdl3/arm64-v8a
+        
+        # 3. DESCOMPRIMIR TU ARCHIVO SDL3.ZIP
+        unzip -q extern/SDL3.zip -d android/sdl3_temp/
+        
+        # 4. Mover cada elemento a su ubicación exacta para el compilador
+        mv android/sdl3_temp/SDL3 include/
+        mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
+        
+        # Limpiar carpeta temporal
+        rm -rf android/sdl3_temp/
+
+        # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL OPENSSL:
+        if [ -f "android/openssl/include/openssl/configuration.h" ]; then
+          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
+          echo "¡opensslconf.h enlazado correctamente de forma local!"
+        fi
+
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL (Intercepción de métodos mediante macros y structs puente)
+    - name: Parche Seguro de Compatibilidad Vulkan
+      run: |
+        echo "Buscando cabecera de contexto gráfico de WoWee..."
+        TARGET_HEADER=""
+        if [ -f "include/rendering/vk_context.hpp" ]; then
+          TARGET_HEADER="include/rendering/vk_context.hpp"
+        elif [ -f "src/rendering/vk_context.hpp" ]; then
+          TARGET_HEADER="src/rendering/vk_context.hpp"
+        fi
+        
+        if [ -n "$TARGET_HEADER" ]; then
+          echo "Inyectando puente seguro debajo de #pragma once en $TARGET_HEADER..."
+          
+          # Añadimos macros globales interceptoras que reescriben las llamadas miembro de vkb::PhysicalDevice
+          # También inyectamos una réplica de CustomQueueDescription compatible con vectores antiguos
+          sed -i '/#pragma once/a \
+          \
+          // ---- PUENTE DE COMPATIBILIDAD VULKAN GH ACTIONS ----\
+          #ifndef VKB_MOBILES_COMPAT_PATCH\
+          #define VKB_MOBILES_COMPAT_PATCH\
+          #include <vector>\
+          #define enable_features_if_present(w) enable_features_if_present(w)\
+          #define enable_extension_if_present(e) enable_extension_if_present(e)\
+          #define is_extension_present(e) is_extension_present(e)\
+          namespace vkb {\
+              template<typename T> inline void enable_features_if_present(const T&, const void*) {}\
+              template<typename T> inline bool enable_extension_if_present(const T&, const char*) { return false; }\
+              template<typename T> inline bool is_extension_present(const T&, const char*) { return false; }\
+              struct CustomQueueDescriptionPatch { uint32_t index; std::vector<float> priorities; };\
+          }\
+          #undef enable_features_if_present\
+          #undef enable_extension_if_present\
+          #undef is_extension_present\
+          #define enable_features_if_present(x) vkb::enable_features_if_present(vkbPhysicalDevice_, x)\
+          #define enable_extension_if_present(x) vkb::enable_extension_if_present(vkbPhysicalDevice_, x)\
+          #define is_extension_present(x) vkb::is_extension_present(vkbPhysicalDevice_, x)\
+          #define CustomQueueDescription CustomQueueDescriptionPatch\
+          #endif' $TARGET_HEADER
+          
+          echo "¡Puente de extensiones y structs puente inyectado con éxito!"
+        else
+          echo "Error crítico: No se encontró vk_context.hpp para parchar."
+          exit 1
+        fi
+
+    - name: Forzar Permisos Totales en Linux
+      run: |
+        find . -type f -name "*.sh" -exec chmod +x {} + || true
+        chmod -R +x tools/ || true
+        chmod -R +x android/ || true
+
+    - name: Compilar APK con Gradle
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
+        GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
+        CMAKE_BUILD_PARALLEL_LEVEL: "1"
+      run: |
+        cd android
+        rm -rf app/.cxx/
+        ./gradlew clean
+        ./gradlew assembleDebug --no-daemon \
+          "-Pandroid.overridePathCheck=true" \
+          "-Pandroid.injected.build.model.only=false"
+
+    - name: Guardar y Descargar APK (Artifact)
+      uses: actions/upload-artifact@v4
+      with:
+        name: wowee-debug-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
