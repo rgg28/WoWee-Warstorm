@@ -29,6 +29,12 @@ add_compile_definitions(VK_BOOTSTRAP_DISABLE_DISPATCH_TABLE=1)
 # Permite utilizar las extensiones de cuaterniones y funciones matemáticas en game_handler_callbacks.cpp
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL=1)
 
+# 🔥 CORRECCIÓN ADVERTENCIAS PUNTEROS NULOS (ANDROID NDK CLANG):
+# Apaga de forma estricta las advertencias de nulabilidad cosméticas de la librería local vk_mem_alloc.h
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wno-nullability-completeness)
+endif()
+
 # 🛠️ MAPEO DE OPENSSL DINÁMICO (Actualizado a OpenSSL 3.0)
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
 set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto_3.so") # 👈 Actualizado con _3
@@ -76,12 +82,12 @@ foreach(ITEM ${EXTERN_ITEMS})
     endif()
 endforeach()
 
-# Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
+# Mapeamos los directorio de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src            # 🔥 CORRECCIÓN: Permite resolver subcarpetas internas (como src/rendering/)
     ${CMAKE_CURRENT_SOURCE_DIR}/extern
-    ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Añade dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
+    ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Mapea dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
 )
 
 # Enlazamos las librerías nativas al ejecutable/librería principal
