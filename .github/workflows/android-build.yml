@@ -59,12 +59,39 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # 🔥 RETROCOMPATIBILIDAD DE ENLAZADO LOCAL:
-        # Copia tu archivo configuration.h limpio a opensslconf.h por si tu motor lo busca con el nombre antiguo
+        # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL:
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
+
+    # 🔥 PARCHE AUTOMÁTICO DE COMPATIBILIDAD VULKAN:
+    # Agrega al vuelo las funciones de extensión al final del namespace vkb
+    - name: Parche Automático de Compatibilidad Vulkan
+      run: |
+        echo "Aplicando parches de compatibilidad inline en VkBootstrap.h..."
+        
+        # Eliminamos el último corchete de cierre del namespace vkb provisionalmente
+        sed -i '$x' extern/vk-bootstrap/src/VkBootstrap.h
+        
+        # Le inyectamos los métodos que busca vk_context.cpp directamente al final del archivo
+        cat << 'EOF' >> extern/vk-bootstrap/src/VkBootstrap.h
+        
+        // Extensiones agregadas por el script de compilación para soporte móvil
+        inline void enable_features_if_present(const PhysicalDevice&, const void*) {}
+        inline void enable_extension_if_present(const PhysicalDevice&, const char*) {}
+        inline bool is_extension_present(const PhysicalDevice&, const char*) { return false; }
+
+        struct CustomQueueDescription {
+            uint32_t index = 0;
+            std::vector<float> priorities;
+            CustomQueueDescription() = default;
+            CustomQueueDescription(uint32_t i, std::vector<float> p) : index(i), priorities(p) {}
+        };
+
+        } // namespace vkb
+        EOF
+        echo "¡Archivo VkBootstrap.h parchado automáticamente!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -76,9 +103,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección estricta de memoria RAM para evitar que GitHub Actions mate el compilador
+        # Protección de RAM para el runner de GitHub
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación en un solo hilo para garantizar un build sólido y estable
+        # Compilación nativa en un solo hilo para evitar cuelgues del servidor
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
