@@ -1,3 +1,5 @@
+#if defined(WOWEE_HAS_AMD_FSR3_FRAMEGEN) && WOWEE_HAS_AMD_FSR3_FRAMEGEN == 1
+
 #include <cstddef>
 #include <ffx_fsr3upscaler.h>
 #include <ffx_frameinterpolation.h>
@@ -27,4 +29,6 @@ bool amdFsr3FramegenCompileProbe() {
     return true;
 }
 
-}  // namespace wowee::rendering
+} // namespace wowee::rendering
+
+#endif
