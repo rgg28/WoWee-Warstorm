@@ -1,3 +1,28 @@
+name: Compilar y Firmar APK Automáticamente
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Descargar Código del Repositorio
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Configurar Java JDK
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
     - name: Configurar Entorno de Android SDK
       run: |
         echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
@@ -85,3 +110,9 @@
           "-PRELEASE_STORE_PASSWORD=$WOWEE_RELEASE_STORE_PASSWORD" \
           "-PRELEASE_KEY_ALIAS=$WOWEE_RELEASE_KEY_ALIAS" \
           "-PRELEASE_KEY_PASSWORD=$WOWEE_RELEASE_KEY_PASSWORD"
+
+    - name: Subir APK Compilada como Artefacto
+      uses: actions/upload-artifact@v4
+      with:
+        name: wowee-release-apk
+        path: android/app/build/outputs/apk/release/*.apk
