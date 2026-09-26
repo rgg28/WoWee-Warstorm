@@ -59,40 +59,39 @@ jobs:
         # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
 
-        # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL:
+        # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL OPENSSL:
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL VULKAN (VERSIÓN FIJA):
-    - name: Parche Automático de Compatibilidad Vulkan
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO (Inyección superior):
+    - name: Parche Seguro de Compatibilidad Vulkan
       run: |
-        echo "Aplicando parches de compatibilidad inline explícitos con std::vector..."
+        echo "Inyectando puente de compatibilidad en la cabecera del namespace vkb..."
         
-        # Eliminamos la última línea de cierre del namespace provisionalmente
-        sed -i '$d' extern/vk-bootstrap/src/VkBootstrap.h
+        # En lugar de alterar el final del archivo, inyectamos nuestras macros seguras 
+        # en la cabecera justo despues de abrir el namespace vkb original.
+        sed -i '/namespace vkb {/a \
+        struct CustomQueueDescription { \
+            uint32_t index = 0; \
+            std::vector<float> priorities; \
+            CustomQueueDescription() = default; \
+            CustomQueueDescription(uint32_t i, std::vector<float> p) : index(i), priorities(p) {} \
+        }; \
+        inline void enable_features_if_present(const PhysicalDevice&, const void*) {} \
+        inline void enable_extension_if_present(const PhysicalDevice&, const char*) {} \
+        inline bool is_extension_present(const PhysicalDevice&, const char*) { return false; }' extern/vk-bootstrap/src/VkBootstrap.h
         
-        # Inyectamos el puente incluyendo la librería de vectores para evitar el error de tipado
-        cat << 'EOF' >> extern/vk-bootstrap/src/VkBootstrap.h
+        # 🔥 FIJACIÓN DE TIPOS PARA VK_CONTEXT:
+        # Forzamos que vk_context.hpp conozca la estructura AllocatedBuffer inyectando su include base
+        if [ -f "include/rendering/vk_context.hpp" ]; then
+          sed -i '/#define VK_CONTEXT_HPP/a #include "rendering/vk_utils.hpp"' include/rendering/vk_context.hpp
+        elif [ -f "src/rendering/vk_context.hpp" ]; then
+          sed -i '/#define VK_CONTEXT_HPP/a #include "rendering/vk_utils.hpp"' src/rendering/vk_context.hpp
+        fi
         
-        #include <vector>
-        
-        namespace vkb {
-        // Extensiones agregadas por el script de compilación para soporte móvil Vulkan 1.1
-        inline void enable_features_if_present(const vkb::PhysicalDevice&, const void*) {}
-        inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {}
-        inline bool is_extension_present(const vkb::PhysicalDevice&, const char*) { return false; }
-
-        struct CustomQueueDescription {
-            uint32_t index = 0;
-            std::vector<float> priorities;
-            CustomQueueDescription() = default;
-            CustomQueueDescription(uint32_t i, std::vector<float> p) : index(i), priorities(p) {}
-        };
-        } // namespace vkb
-        EOF
-        echo "¡Archivo VkBootstrap.h parchado con librerías nativas completas!"
+        echo "¡Puente gráfico y enlazador de AllocatedBuffer parcheados con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -106,7 +105,7 @@ jobs:
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
         # Protección de RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Mantenemos un hilo de C++ para asegurar estabilidad absoluta
+        # Compilación nativa en un solo hilo para garantizar estabilidad absoluta
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
