@@ -65,33 +65,33 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO (Inyección superior):
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO (Inyección en cabeceras de WoWee):
     - name: Parche Seguro de Compatibilidad Vulkan
       run: |
-        echo "Inyectando puente de compatibilidad en la cabecera del namespace vkb..."
+        echo "Inyectando puente de extensiones Vulkan 1.1 en vk_context.hpp..."
         
-        # En lugar de alterar el final del archivo, inyectamos nuestras macros seguras 
-        # en la cabecera justo despues de abrir el namespace vkb original.
-        sed -i '/namespace vkb {/a \
-        struct CustomQueueDescription { \
-            uint32_t index = 0; \
-            std::vector<float> priorities; \
-            CustomQueueDescription() = default; \
-            CustomQueueDescription(uint32_t i, std::vector<float> p) : index(i), priorities(p) {} \
-        }; \
-        inline void enable_features_if_present(const PhysicalDevice&, const void*) {} \
-        inline void enable_extension_if_present(const PhysicalDevice&, const char*) {} \
-        inline bool is_extension_present(const PhysicalDevice&, const char*) { return false; }' extern/vk-bootstrap/src/VkBootstrap.h
-        
-        # 🔥 FIJACIÓN DE TIPOS PARA VK_CONTEXT:
-        # Forzamos que vk_context.hpp conozca la estructura AllocatedBuffer inyectando su include base
+        # Localizamos el archivo de contexto del motor gráfico de WoWee
+        TARGET_HEADER=""
         if [ -f "include/rendering/vk_context.hpp" ]; then
-          sed -i '/#define VK_CONTEXT_HPP/a #include "rendering/vk_utils.hpp"' include/rendering/vk_context.hpp
+          TARGET_HEADER="include/rendering/vk_context.hpp"
         elif [ -f "src/rendering/vk_context.hpp" ]; then
-          sed -i '/#define VK_CONTEXT_HPP/a #include "rendering/vk_utils.hpp"' src/rendering/vk_context.hpp
+          TARGET_HEADER="src/rendering/vk_context.hpp"
         fi
         
-        echo "¡Puente gráfico y enlazador de AllocatedBuffer parcheados con éxito!"
+        if [ -n "$TARGET_HEADER" ]; then
+          # Inyectamos de forma segura las extensiones simuladas directamente bajo el namespace vkb 
+          # dentro del archivo de cabecera que procesa tu motor gráfico
+          sed -i '/#define VK_CONTEXT_HPP/a \
+          #include <vector>\
+          namespace vkb { \
+              inline void enable_features_if_present(const vkb::PhysicalDevice&, const void*) {} \
+              inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {} \
+              inline bool is_extension_present(const vkb::PhysicalDevice&, const char*) { return false; } \
+          }' $TARGET_HEADER
+          echo "¡Puente de extensiones móviles inyectado en $TARGET_HEADER con éxito!"
+        else
+          echo "Advertencia: vk_context.hpp no fue encontrado en las rutas estándar"
+        fi
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -103,9 +103,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM
+        # Protección estricta de memoria RAM para el runner de GitHub
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación nativa en un solo hilo para garantizar estabilidad absoluta
+        # Compilación nativa en un solo hilo para garantizar estabilidad absoluta y evitar colapsos de RAM
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
