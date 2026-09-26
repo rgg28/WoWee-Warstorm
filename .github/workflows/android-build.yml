@@ -65,10 +65,12 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 INYECCIÓN INLINE DIRECTA DE COMPATIBILIDAD VULKAN MÓVIL:
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO (Inyección en cabeceras de WoWee):
     - name: Parche Seguro de Compatibilidad Vulkan
       run: |
         echo "Inyectando puente de extensiones Vulkan 1.1 en vk_context.hpp..."
+        
+        # Localizamos el archivo de contexto del motor gráfico de WoWee
         TARGET_HEADER=""
         if [ -f "include/rendering/vk_context.hpp" ]; then
           TARGET_HEADER="include/rendering/vk_context.hpp"
@@ -77,14 +79,18 @@ jobs:
         fi
         
         if [ -n "$TARGET_HEADER" ]; then
+          # Inyectamos de forma segura las extensiones simuladas directamente bajo el namespace vkb 
+          # dentro del archivo de cabecera que procesa tu motor gráfico
           sed -i '/#define VK_CONTEXT_HPP/a \
           #include <vector>\
           namespace vkb { \
-              inline void enable_features_if_present(const vkb::PhysicalDevice&, const void*) {} \
-              inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {} \
-              inline bool is_extension_present(const vkb::PhysicalDevice&, const char*) { return false; } \
+              inline void enable_features_if_present(const void*) {} \
+              inline bool enable_extension_if_present(const char*) { return false; } \
+              inline bool is_extension_present(const char*) { return false; } \
           }' $TARGET_HEADER
-          echo "¡Puente de extensiones móviles inyectado con éxito!"
+          echo "¡Puente de extensiones móviles inyectado en $TARGET_HEADER con éxito!"
+        else
+          echo "Advertencia: vk_context.hpp no fue encontrado en las rutas estándar"
         fi
 
     - name: Forzar Permisos Totales en Linux
@@ -97,12 +103,10 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Control estricto de memoria RAM para el runner gratuito de GitHub
+        # Protección estricta de memoria RAM para el runner de GitHub
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
+        # Compilación nativa en un solo hilo para garantizar estabilidad absoluta y evitar colapsos de RAM
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
-        # Forzado de omisión de advertencias a nivel de variables de entorno de Linux
-        CFLAGS: "-Wno-nullability-completeness"
-        CXXFLAGS: "-Wno-nullability-completeness"
       run: |
         cd android
         rm -rf app/.cxx/
