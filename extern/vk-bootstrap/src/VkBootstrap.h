@@ -667,7 +667,7 @@ class PhysicalDeviceSelector {
         while (pNext_struct) {
             VkBaseOutStructure out_structure{};
             memcpy(&out_structure, pNext_struct, sizeof(VkBaseOutStructure));
-            //uint32_t struct_size = vkb::detail::get_structure_size(out_structure.sType);
+            uint32_t struct_size = 0;
             if (struct_size > 0) {
                 criteria.extended_features_chain.add_structure(out_structure.sType, struct_size, pNext_struct);
             }
