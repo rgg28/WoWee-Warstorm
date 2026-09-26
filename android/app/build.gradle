@@ -63,9 +63,20 @@ android {
     compileSdk 34
     ndkVersion '28.2.13676358'
 
-    // 🔍 NUEVO: Activa las características de Prefab para desempaquetar librerías .aar nativas como SDL3
     buildFeatures {
         prefab true
+    }
+
+    // 🔑 ENLAZAMOS LAS LLAVES DINÁMICAS GENERADAS POR GITHUB ACTIONS
+    signingConfigs {
+        release {
+            if (project.hasProperty('RELEASE_STORE_FILE')) {
+                storeFile file(project.property('RELEASE_STORE_FILE'))
+                storePassword project.property('RELEASE_STORE_PASSWORD')
+                keyAlias project.property('RELEASE_KEY_ALIAS')
+                keyPassword project.property('RELEASE_KEY_PASSWORD')
+            }
+        }
     }
 
     defaultConfig {
@@ -100,7 +111,8 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            // Mapeamos para que use la firma de producción autogenerada
+            signingConfig signingConfigs.release
         }
     }
     compileOptions {
@@ -109,9 +121,7 @@ android {
     }
 }
 
-// 🛠️ ENLAZAMOS TU ARCHIVO .AAR PRECOMPILADO DESDE LA RAÍZ DE APP
 dependencies {
-    // Lee directamente el archivo precompilado que subiste junto a este build.gradle
     implementation files('SDL3-3.4.16.aar')
 }
 
