@@ -65,12 +65,11 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO (Inyección en cabeceras de WoWee):
-    - name: Parche Seguro de Compatibilidad Vulkan
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO:
+    - name: Parche Seguro de Compartibilidad Vulkan
       run: |
         echo "Inyectando puente de extensiones Vulkan 1.1 en vk_context.hpp..."
         
-        # Localizamos el archivo de contexto del motor gráfico de WoWee
         TARGET_HEADER=""
         if [ -f "include/rendering/vk_context.hpp" ]; then
           TARGET_HEADER="include/rendering/vk_context.hpp"
@@ -79,8 +78,6 @@ jobs:
         fi
         
         if [ -n "$TARGET_HEADER" ]; then
-          # Inyectamos de forma segura las extensiones simuladas directamente bajo el namespace vkb 
-          # dentro del archivo de cabecera que procesa tu motor gráfico
           sed -i '/#define VK_CONTEXT_HPP/a \
           #include <vector>\
           namespace vkb { \
@@ -88,9 +85,7 @@ jobs:
               inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {} \
               inline bool is_extension_present(const vkb::PhysicalDevice&, const char*) { return false; } \
           }' $TARGET_HEADER
-          echo "¡Puente de extensiones móviles inyectado en $TARGET_HEADER con éxito!"
-        else
-          echo "Advertencia: vk_context.hpp no fue encontrado en las rutas estándar"
+          echo "¡Puente de extensiones móviles inyectado con éxito!"
         fi
 
     - name: Forzar Permisos Totales en Linux
@@ -103,10 +98,14 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección estricta de memoria RAM para el runner de GitHub
+        # Protección de RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación nativa en un solo hilo para garantizar estabilidad absoluta y evitar colapsos de RAM
+        # Compilación nativa en un hilo estable
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
+        # 🔥 SOLUCIÓN ADVERTENCIAS COMPILADOR NATIVO:
+        # Añadimos la bandera para apagar las advertencias de completitud de punteros nulos de VMA
+        CXXFLAGS: "-Wno-nullability-completeness"
+        CFLAGS: "-Wno-nullability-completeness"
       run: |
         cd android
         rm -rf app/.cxx/
