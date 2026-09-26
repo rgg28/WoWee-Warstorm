@@ -67,8 +67,8 @@ file(GLOB_RECURSE WOWEE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
 )
 
-# 🔥 CORRECCIÓN PARA IMGUI Y VK-BOOTSTRAP:
-# Escanear los archivos fuente (.cpp) de ImGui y vk-bootstrap que están en extern/ para que se compilen e incluyan en la build.
+# 🔥 CORRECCIÓN PARA IMGUI, VK-BOOTSTRAP Y LUA:
+# Escanear los archivos fuente (.cpp y .c) de extern/ para que se compilen e incluyan en la build.
 file(GLOB IMGUI_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends/imgui_impl_sdl3.cpp"
@@ -77,12 +77,17 @@ file(GLOB IMGUI_SOURCES
 file(GLOB VK_BOOTSTRAP_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src/*.cpp"
 )
+# Escanear dinámicamente todos los archivos .c de tu carpeta real de Lua 5.1.5
+file(GLOB LUA_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/*.c"
+)
 
 # Compilación de la librería nativa principal sumando los fuentes de las librerías en extern/
 add_library(wowee SHARED
     ${WOWEE_SOURCES}
     ${IMGUI_SOURCES}
     ${VK_BOOTSTRAP_SOURCES}
+    ${LUA_SOURCES}
 )
 
 # 🔄 ESCANEO RECURSIVO AUTOMÁTICO DE SUBDIRECTORIOS EN EXTERN
@@ -102,6 +107,7 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/extern
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src      # 🔥 CORRECCIÓN: Directorio de cabeceras de Lua mapeado correctamente
     ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Mapea dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
 )
 
