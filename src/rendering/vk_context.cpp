@@ -938,13 +938,13 @@ bool VkContext::createLogicalDevice() {
             }
         }
 
-        std::vector<vkb::CustomQueueDescription> queueDescs;
+             std::vector<vkb::CustomQueueDescription> queueDescs;
         for (uint32_t i = 0; i < static_cast<uint32_t>(families.size()); i++) {
             if (i == gfxFamily) {
                 // Request 2 queues: [0] graphics, [1] transfer uploads
-                queueDescs.emplace_back(i, std::vector<float>{1.0f, 1.0f});
+                queueDescs.push_back(vkb::CustomQueueDescription{ i, std::vector<float>{1.0f, 1.0f} });
             } else {
-                queueDescs.emplace_back(i, std::vector<float>{1.0f});
+                queueDescs.push_back(vkb::CustomQueueDescription{ i, std::vector<float>{1.0f} });
             }
         }
         deviceBuilder.custom_queue_setup(queueDescs);
