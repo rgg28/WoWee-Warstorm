@@ -65,11 +65,10 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL SEGURO:
-    - name: Parche Seguro de Compartibilidad Vulkan
+    # 🔥 INYECCIÓN INLINE DIRECTA DE COMPATIBILIDAD VULKAN MÓVIL:
+    - name: Parche Seguro de Compatibilidad Vulkan
       run: |
         echo "Inyectando puente de extensiones Vulkan 1.1 en vk_context.hpp..."
-        
         TARGET_HEADER=""
         if [ -f "include/rendering/vk_context.hpp" ]; then
           TARGET_HEADER="include/rendering/vk_context.hpp"
@@ -98,14 +97,12 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM
+        # Control estricto de memoria RAM para el runner gratuito de GitHub
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación nativa en un hilo estable
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
-        # 🔥 SOLUCIÓN ADVERTENCIAS COMPILADOR NATIVO:
-        # Añadimos la bandera para apagar las advertencias de completitud de punteros nulos de VMA
-        CXXFLAGS: "-Wno-nullability-completeness"
+        # Forzado de omisión de advertencias a nivel de variables de entorno de Linux
         CFLAGS: "-Wno-nullability-completeness"
+        CXXFLAGS: "-Wno-nullability-completeness"
       run: |
         cd android
         rm -rf app/.cxx/
