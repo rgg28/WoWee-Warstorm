@@ -40,8 +40,7 @@
 #include <utility>
 
 #include <vulkan/vulkan_core.h>
-
-#include "VkBootstrapDispatch.h"
+//#include "VkBootstrapDispatch.h"
 #include "VkBootstrapFeatureChain.h"
 
 #ifdef VK_MAKE_API_VERSION
