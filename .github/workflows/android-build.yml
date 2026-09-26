@@ -15,7 +15,24 @@ jobs:
       uses: actions/checkout@v5
       with:
         fetch-depth: 0
-        submodules: 'recursive' # Forzamos la descarga limpia de submódulos si existen
+        submodules: 'recursive'
+
+    # 🔥 ACTUALIZACIÓN INLINE DEL SUBMÓDULO GRÁFICO OBSOLETO:
+    - name: Forzar Actualización del Submódulo Vulkan (VkBootstrap)
+      run: |
+        echo "Sincronizando y forzando la última versión del submódulo gráfico..."
+        git submodule sync --recursive
+        git submodule update --init --recursive --force
+        
+        # Si vk-bootstrap está en la ruta estándar de externos, forzamos su actualización a HEAD
+        if [ -d "extern/vk-bootstrap" ]; then
+          cd extern/vk-bootstrap
+          git fetch origin
+          git checkout master || git checkout main
+          git pull origin master || git pull origin main
+          cd ../..
+          echo "Submódulo vk-bootstrap actualizado con éxito."
+        fi
 
     - name: Configurar Java 17
       uses: actions/setup-java@v5
@@ -82,12 +99,9 @@ jobs:
         cd android
         rm -rf app/.cxx/
         ./gradlew clean
-        
-        # Compilamos forzando banderas de preprocesador nativas para ignorar extensiones de escritorio (FSR/RayTracing)
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false" \
-          "-Pandroid.cmake.arguments=-DVK_BOOTSTRAP_DISABLE_DISPATCH_TABLE=1 -DWOWEE_HAS_AMD_FSR2=0 -DWOWEE_HAS_AMD_FSR3_FRAMEGEN=0"
+          "-Pandroid.injected.build.model.only=false"
 
     - name: Guardar y Descargar APK (Artifact)
       uses: actions/upload-artifact@v4
