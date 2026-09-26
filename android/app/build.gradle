@@ -120,12 +120,10 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // 🛡️ FILTRO DE SEGURIDAD PARA CLASES DUPLICADAS DE SDL3 EN EL PROCESO DEX
+    // 🛡️ FILTRO DE SEGURIDAD CORREGIDO (Sintaxis plana para versiones modernas de AGP)
     packaging {
-        options {
-            pickFirst 'org/libsdl/app/HIDDevice.class'
-            pickFirst 'org/libsdl/app/*.class'
-        }
+        pickFirst 'org/libsdl/app/HIDDevice.class'
+        pickFirst 'org/libsdl/app/*.class'
     }
 }
 
