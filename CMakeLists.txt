@@ -48,7 +48,7 @@ if(NOT TARGET OpenSSL::Crypto)
 endif()
 if(NOT TARGET OpenSSL::SSL)
   add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
+  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
 # 📦 MAPEO DE SDL3 (UBICACIONES PROVISTAS POR EL SCRIPT DE ACTIONS)
@@ -68,7 +68,6 @@ file(GLOB_RECURSE WOWEE_SOURCES
 )
 
 # 🔥 CORRECCIÓN PARA IMGUI, VK-BOOTSTRAP Y LUA:
-# Escanear los archivos fuente (.cpp y .c) de extern/ para que se compilen e incluyan en la build.
 file(GLOB IMGUI_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends/imgui_impl_sdl3.cpp"
@@ -77,17 +76,22 @@ file(GLOB IMGUI_SOURCES
 file(GLOB VK_BOOTSTRAP_SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src/*.cpp"
 )
-# Escanear dinámicamente todos los archivos .c de tu carpeta real de Lua 5.1.5
-file(GLOB LUA_SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/*.c"
+
+# 🔥 SOLUCIÓN EXCLUSIÓN DE MAINS DUPLICADOS DE LUA:
+# Escaneamos todos los archivos .c, pero removemos lua.c y luac.c para evitar 'duplicate symbol: main'
+file(GLOB ALL_LUA_C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/*.c")
+set(LUA_SOURCES ${ALL_LUA_C_FILES})
+list(REMOVE_ITEM LUA_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/lua.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/luac.c"
 )
 
-# Compilación de la librería nativa principal sumando los fuentes de las librerías en extern/
+# Compilación de la librería nativa principal sumando los fuentes filtrados
 add_library(wowee SHARED
     ${WOWEE_SOURCES}
     ${IMGUI_SOURCES}
     ${VK_BOOTSTRAP_SOURCES}
-    ${LUA_SOURCES}
+    ${LUA_SOURCES} # 👈 Solo incluye la librería Core sin los ejecutables duplicados
 )
 
 # 🔄 ESCANEO RECURSIVO AUTOMÁTICO DE SUBDIRECTORIOS EN EXTERN
@@ -103,16 +107,15 @@ endforeach()
 # Mapeamos los directorio de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src            # 🔥 CORRECCIÓN: Permite resolver subcarpetas internas (como src/rendering/)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src            
     ${CMAKE_CURRENT_SOURCE_DIR}/extern
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends
-    ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src      # 🔥 CORRECCIÓN: Directorio de cabeceras de Lua mapeado correctamente
-    ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Mapea dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src      
+    ${AUTOMATIC_EXTERN_INCLUDES} 
 )
 
 # 🔥 CORRECCIÓN DEL LINKER: Enlazamos de forma explícita las librerías nativas de Android
-# 'vulkan' resuelve las llamadas directas de la API. 'android' y 'log' completan el soporte de la plataforma.
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
