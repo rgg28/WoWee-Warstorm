@@ -79,6 +79,7 @@ endforeach()
 # Mapeamos los directorios de inclusión nativos del motor y submódulos físicos
 target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src            # 🔥 CORRECCIÓN: Permite resolver subcarpetas internas (como src/rendering/)
     ${CMAKE_CURRENT_SOURCE_DIR}/extern
     ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Añade dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
 )
