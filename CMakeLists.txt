@@ -67,9 +67,22 @@ file(GLOB_RECURSE WOWEE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
 )
 
-# Compilación de la librería nativa principal usando la lista automática de archivos encontrados
+# 🔥 CORRECCIÓN PARA IMGUI Y VK-BOOTSTRAP:
+# Escanear los archivos fuente (.cpp) de ImGui y vk-bootstrap que están en extern/ para que se compilen e incluyan en la build.
+file(GLOB IMGUI_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends/imgui_impl_sdl3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends/imgui_impl_vulkan.cpp"
+)
+file(GLOB VK_BOOTSTRAP_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/extern/vk-bootstrap/src/*.cpp"
+)
+
+# Compilación de la librería nativa principal sumando los fuentes de las librerías en extern/
 add_library(wowee SHARED
     ${WOWEE_SOURCES}
+    ${IMGUI_SOURCES}
+    ${VK_BOOTSTRAP_SOURCES}
 )
 
 # 🔄 ESCANEO RECURSIVO AUTOMÁTICO DE SUBDIRECTORIOS EN EXTERN
@@ -87,12 +100,18 @@ target_include_directories(wowee PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/src            # 🔥 CORRECCIÓN: Permite resolver subcarpetas internas (como src/rendering/)
     ${CMAKE_CURRENT_SOURCE_DIR}/extern
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/extern/imgui/backends
     ${AUTOMATIC_EXTERN_INCLUDES} # 👈 Mapea dinámicamente cada subcarpeta encontrada (incluyendo extern/vk-bootstrap)
 )
 
-# Enlazamos las librerías nativas al ejecutable/librería principal
+# 🔥 CORRECCIÓN DEL LINKER: Enlazamos de forma explícita las librerías nativas de Android
+# 'vulkan' resuelve las llamadas directas de la API. 'android' y 'log' completan el soporte de la plataforma.
 target_link_libraries(wowee PUBLIC 
     OpenSSL::SSL 
     OpenSSL::Crypto
-    SDL3::SDL3     
+    SDL3::SDL3
+    vulkan
+    android
+    log
 )
