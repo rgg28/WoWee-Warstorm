@@ -65,17 +65,20 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE AUTOMÁTICO DE COMPATIBILIDAD VULKAN CORREGIDO:
+    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL VULKAN (VERSIÓN FIJA):
     - name: Parche Automático de Compatibilidad Vulkan
       run: |
-        echo "Aplicando parches de compatibilidad inline explícitos en... VkBootstrap.h"
+        echo "Aplicando parches de compatibilidad inline explícitos con std::vector..."
         
-        # Eliminamos la última línea de cierre provisionalmente para meter el puente
+        # Eliminamos la última línea de cierre del namespace provisionalmente
         sed -i '$d' extern/vk-bootstrap/src/VkBootstrap.h
         
-        # Inyectamos las funciones usando el tipado explícito vkb:: para evitar ambigüedades
+        # Inyectamos el puente incluyendo la librería de vectores para evitar el error de tipado
         cat << 'EOF' >> extern/vk-bootstrap/src/VkBootstrap.h
         
+        #include <vector>
+        
+        namespace vkb {
         // Extensiones agregadas por el script de compilación para soporte móvil Vulkan 1.1
         inline void enable_features_if_present(const vkb::PhysicalDevice&, const void*) {}
         inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {}
@@ -87,10 +90,9 @@ jobs:
             CustomQueueDescription() = default;
             CustomQueueDescription(uint32_t i, std::vector<float> p) : index(i), priorities(p) {}
         };
-
         } // namespace vkb
         EOF
-        echo "¡Archivo VkBootstrap.h parchado con tipos explícitos con éxito!"
+        echo "¡Archivo VkBootstrap.h parchado con librerías nativas completas!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -102,9 +104,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM para el runner de GitHub
+        # Protección de RAM
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación nativa en un solo hilo para evitar cuelgues del servidor
+        # Mantenemos un hilo de C++ para asegurar estabilidad absoluta
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
