@@ -62,7 +62,8 @@ jobs:
 
         # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL OPENSSL:
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
-          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/configuration.h
+          # CORREGIDO: Se copia como opensslconf.h en lugar de duplicarse a sí mismo
+          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
@@ -81,9 +82,6 @@ jobs:
           #define enable_features_if_present(w) enable_features_if_present(w) \
           #define enable_extension_if_present(e) enable_extension_if_present(e) \
           #define is_extension_present(e) is_extension_present(e) \
-          #undef enable_features_if_present\
-          #undef enable_extension_if_present\
-          #undef is_extension_present\
           #define enable_features_if_present(x) vkb_compat_enable_features(x)\
           #define enable_extension_if_present(x) vkb_compat_enable_ext(x)\
           #define is_extension_present(x) vkb_compat_is_ext_present(x)' $TARGET_SRC
