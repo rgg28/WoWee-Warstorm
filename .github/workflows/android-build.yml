@@ -1,46 +1,21 @@
-name: Compilar APK de WoWee (Android Release)
-
-on:
-  push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
-
-jobs:
-  build-android:
-    name: Compilar y Firmar APK Automáticamente
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Descargar el código fuente
-      uses: actions/checkout@v5
-      with:
-        fetch-depth: 0
-        submodules: 'recursive'
-
-    - name: Configurar Java 17
-      uses: actions/setup-java@v5
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
-    - name: Configurar Variables del SDK de Android
+    - name: Configurar Entorno de Android SDK
       run: |
         echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> $GITHUB_ENV
 
-    - name: Aceptar Licencias de Android
+    - name: Aceptar Licencias del SDK de Android
       run: |
         yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Instalar versión exacta NDK y CMake
+    - name: Instalar Dependencias NDK y CMake
       run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Descomprimir Librerías (GLM y SDL3)
+    - name: Preparar Librerías Externas (GLM y SDL3)
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         
-        # 1. Descomprimir GLM en la carpeta include/
+        # 1. Descomprimir GLM
         rm -rf include/glm
         unzip -q extern/glm.zip -d include/
         
@@ -50,59 +25,30 @@ jobs:
         mkdir -p include
         mkdir -p android/sdl3/arm64-v8a
         
-        # 3. DESCOMPRIMIR ARCHIVO SDL3.ZIP
+        # 3. Descomprimir SDL3
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
         
-        # 4. Mover cada elemento a su ubicación exacta para el compilador
+        # 4. Organizar elementos para el compilador
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
-        
-        # Limpiar carpeta temporal
         rm -rf android/sdl3_temp/
-
-        # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL OPENSSL:
+        
+        # 5. Enlace local de OpenSSL
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
-          # CORREGIDO: Se copia como opensslconf.h en lugar de duplicarse a sí mismo
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🛠️ PARCHE QUIRÚRGICO DE REDIRECCIÓN EN TIEMPO DE COMPILACIÓN (VULKAN)
-    - name: Parche de Compatibilidad Gráfica Vulkan Móvil
-      run: |
-        TARGET_SRC="src/rendering/vk_context.cpp"
-        if [ -f "$TARGET_SRC" ]; then
-          echo "Aplicando interceptores de métodos obsoletos sobre $TARGET_SRC..."
-          sed -i '/#include <VkBootstrap.h>/a \
-          namespace {\
-              inline void vkb_compat_enable_features(const void*) {}\
-              inline bool vkb_compat_enable_ext(const char*) { return false; }\
-              inline bool vkb_compat_is_ext_present(const char*) { return false; }\
-          }\
-          #define enable_features_if_present(w) enable_features_if_present(w) \
-          #define enable_extension_if_present(e) enable_extension_if_present(e) \
-          #define is_extension_present(e) is_extension_present(e) \
-          #define enable_features_if_present(x) vkb_compat_enable_features(x)\
-          #define enable_extension_if_present(x) vkb_compat_enable_ext(x)\
-          #define is_extension_present(x) vkb_compat_is_ext_present(x)' $TARGET_SRC
-          echo "¡Lógica puente de Vulkan insertada con éxito!"
-        else
-          echo "Error: No se encontró el archivo $TARGET_SRC"
-          exit 1
-        fi
-
-    # 🔑 GENERACIÓN AUTOMÁTICA DE LA LLAVE KEYSTORE (RELEASE)
-    - name: Generar Llave Keystore de Producción de forma Automática
+    - name: Generar Keystore Digital en Tiempo de Ejecución
       env:
-        STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
-        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        STORE_PASS: ${{ secrets.STORE_PASS }}
+        KEY_PASS: ${{ secrets.KEY_PASS }}
       run: |
         if [ -z "$STORE_PASS" ] || [ -z "$KEY_PASS" ]; then
           echo "Error crítico: Los secretos de contraseñas de firma están vacíos en GitHub."
           exit 1
         fi
-        
-        echo "Generando wowee-release.jks en tiempo de ejecución..."
+        echo "Generando wowee-release.jks..."
         keytool -genkey -v \
           -keystore android/app/wowee-release.jks \
           -keyalg RSA \
@@ -114,29 +60,24 @@ jobs:
           -dname "CN=Wowee, OU=Warstorm, O=WoWee-Warstorm, L=Mobiles, S=Graphics, C=US"
         echo "¡Llave keystore generada con éxito!"
 
-    - name: Forzar Permisos Totales en Linux
+    - name: Asignar Permisos de Ejecución
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
         chmod -R +x tools/ || true
         chmod -R +x android/ || true
 
-    # 🚀 COMPILAR LA APK RELEASE FIRMADA
-    - name: Compilar APK con Gradle (Modo Release Firmado)
+    - name: Compilar y Firmar APK (Gradle)
       env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
-        ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        CMAKE_BUILD_PARALLEL_LEVEL: "1"
-        # Inyección de las propiedades de firma dinámica
         WOWEE_RELEASE_STORE_FILE: "wowee-release.jks"
-        WOWEE_RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        WOWEE_RELEASE_STORE_PASSWORD: ${{ secrets.STORE_PASS }}
         WOWEE_RELEASE_KEY_ALIAS: "wowee-alias"
-        WOWEE_RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        WOWEE_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASS }}
+        GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
+        CMAKE_BUILD_PARALLEL_LEVEL: 1
       run: |
         cd android
         rm -rf app/.cxx/
         ./gradlew clean
-        
         ./gradlew assembleRelease --no-daemon \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false" \
@@ -144,9 +85,3 @@ jobs:
           "-PRELEASE_STORE_PASSWORD=$WOWEE_RELEASE_STORE_PASSWORD" \
           "-PRELEASE_KEY_ALIAS=$WOWEE_RELEASE_KEY_ALIAS" \
           "-PRELEASE_KEY_PASSWORD=$WOWEE_RELEASE_KEY_PASSWORD"
-
-    - name: Guardar y Descargar APK Firmada (Artifact)
-      uses: actions/upload-artifact@v4
-      with:
-        name: wowee-production-release-apk
-        path: android/app/build/outputs/apk/release/app-release.apk
