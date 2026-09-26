@@ -37,8 +37,8 @@ endif()
 
 # 🛠️ MAPEO DE OPENSSL DINÁMICO (Actualizado a OpenSSL 3.0)
 set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
-set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto_3.so") # 👈 Actualizado con _3
-set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl_3.so")       # 👈 Actualizado con _3
+set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto_3.so") 
+set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl_3.so")       
 set(OPENSSL_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 set(OpenSSL_FOUND TRUE)
 
@@ -48,7 +48,7 @@ if(NOT TARGET OpenSSL::Crypto)
 endif()
 if(NOT TARGET OpenSSL::SSL)
   add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
+  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
 endif()
 
 # 📦 MAPEO DE SDL3 (UBICACIONES PROVISTAS POR EL SCRIPT DE ACTIONS)
@@ -78,7 +78,6 @@ file(GLOB VK_BOOTSTRAP_SOURCES
 )
 
 # 🔥 SOLUCIÓN EXCLUSIÓN DE MAINS DUPLICADOS DE LUA:
-# Escaneamos todos los archivos .c, pero removemos lua.c y luac.c para evitar 'duplicate symbol: main'
 file(GLOB ALL_LUA_C_FILES "${CMAKE_CURRENT_SOURCE_DIR}/extern/lua-5.1.5/src/*.c")
 set(LUA_SOURCES ${ALL_LUA_C_FILES})
 list(REMOVE_ITEM LUA_SOURCES 
@@ -91,7 +90,7 @@ add_library(wowee SHARED
     ${WOWEE_SOURCES}
     ${IMGUI_SOURCES}
     ${VK_BOOTSTRAP_SOURCES}
-    ${LUA_SOURCES} # 👈 Solo incluye la librería Core sin los ejecutables duplicados
+    ${LUA_SOURCES}
 )
 
 # 🔄 ESCANEO RECURSIVO AUTOMÁTICO DE SUBDIRECTORIOS EN EXTERN
@@ -115,12 +114,16 @@ target_include_directories(wowee PUBLIC
     ${AUTOMATIC_EXTERN_INCLUDES} 
 )
 
-# 🔥 CORRECCIÓN DEL LINKER: Enlazamos de forma explícita las librerías nativas de Android
+# 🔥 CORRECCIÓN FINAL DEL LINKER: 
+# 1. Agregamos las librerías físicas de OpenSSL (${OPENSSL_LIBRARIES}) para forzar su enlace en Clang.
+# 2. Agregamos la librería nativa 'z' de Android para resolver compress/uncompress/inflate.
 target_link_libraries(wowee PUBLIC 
-    OpenSSL::SSL 
-    OpenSSL::Crypto
+    ${OPENSSL_LIBRARIES}
     SDL3::SDL3
     vulkan
     android
     log
+    z
+    atomic
+    m
 )
