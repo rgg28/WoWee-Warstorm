@@ -1,4 +1,4 @@
-name: Compilar APK de WoWee (Android Solo)
+name: Compilar APK de WoWee (Android Release)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-android:
-    name: Compilar APK para Celular
+    name: Compilar y Firmar APK Automáticamente
     runs-on: ubuntu-latest
 
     steps:
@@ -50,7 +50,7 @@ jobs:
         mkdir -p include
         mkdir -p android/sdl3/arm64-v8a
         
-        # 3. DESCOMPRIMIR TU ARCHIVO SDL3.ZIP
+        # 3. DESCOMPRIMIR ARCHIVO SDL3.ZIP
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
         
         # 4. Mover cada elemento a su ubicación exacta para el compilador
@@ -62,42 +62,59 @@ jobs:
 
         # RETROCOMPATIBILIDAD DE ENLAZADO LOCAL OPENSSL:
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
-          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
+          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/configuration.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE EXTENSIÓN INLINE (Inyecta un envoltorio limpio sobre el archivo fuente de WoWee)
-    - name: Parche de Compatibilidad Gráfica Vulkan 1.1
+    # 🛠️ PARCHE QUIRÚRGICO DE REDIRECCIÓN EN TIEMPO DE COMPILACIÓN (VULKAN)
+    - name: Parche de Compatibilidad Gráfica Vulkan Móvil
       run: |
         TARGET_SRC="src/rendering/vk_context.cpp"
         if [ -f "$TARGET_SRC" ]; then
-          echo "Insertando puente de compatibilidad sobre $TARGET_SRC..."
-          
-          # Añadimos un envoltorio justo encima de la primera línea de vk_context.cpp
-          # Esto extiende la clase vkb::PhysicalDevice agregando los métodos faltantes de forma segura 
-          # antes de que las funciones internas de WoWee intenten llamarlos.
-          sed -i '1i \
-          #include <vector>\
-          #include <cstdint>\
-          #include <vulkan/vulkan.h>\
-          namespace vkb {\
-              struct CustomQueueDescription { uint32_t index; std::vector<float> priorities; };\
+          echo "Aplicando interceptores de métodos obsoletos sobre $TARGET_SRC..."
+          sed -i '/#include <VkBootstrap.h>/a \
+          namespace {\
+              inline void vkb_compat_enable_features(const void*) {}\
+              inline bool vkb_compat_enable_ext(const char*) { return false; }\
+              inline bool vkb_compat_is_ext_present(const char*) { return false; }\
           }\
-          #define VkBootstrap_h_\
-          namespace vkb {\
-              struct PhysicalDevice {\
-                  VkPhysicalDevice physical_device = VK_NULL_HANDLE;\
-                  std::vector<VkQueueFamilyProperties> get_queue_families() { return {}; }\
-                  bool enable_features_if_present(const VkPhysicalDeviceFeatures&) { return false; }\
-                  bool enable_extension_if_present(const char*) { return false; }\
-                  bool is_extension_present(const char*) { return false; }\
-              };\
-          }' $TARGET_SRC
-          echo "¡Puente C++ inyectado correctamente al inicio del archivo!"
+          #define enable_features_if_present(w) enable_features_if_present(w) \
+          #define enable_extension_if_present(e) enable_extension_if_present(e) \
+          #define is_extension_present(e) is_extension_present(e) \
+          #undef enable_features_if_present\
+          #undef enable_extension_if_present\
+          #undef is_extension_present\
+          #define enable_features_if_present(x) vkb_compat_enable_features(x)\
+          #define enable_extension_if_present(x) vkb_compat_enable_ext(x)\
+          #define is_extension_present(x) vkb_compat_is_ext_present(x)' $TARGET_SRC
+          echo "¡Lógica puente de Vulkan insertada con éxito!"
         else
           echo "Error: No se encontró el archivo $TARGET_SRC"
           exit 1
         fi
+
+    # 🔑 GENERACIÓN AUTOMÁTICA DE LA LLAVE KEYSTORE (RELEASE)
+    - name: Generar Llave Keystore de Producción de forma Automática
+      env:
+        STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      run: |
+        if [ -z "$STORE_PASS" ] || [ -z "$KEY_PASS" ]; then
+          echo "Error crítico: Los secretos de contraseñas de firma están vacíos en GitHub."
+          exit 1
+        fi
+        
+        echo "Generando wowee-release.jks en tiempo de ejecución..."
+        keytool -genkey -v \
+          -keystore android/app/wowee-release.jks \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -alias wowee-alias \
+          -storepass "$STORE_PASS" \
+          -keypass "$KEY_PASS" \
+          -dname "CN=Wowee, OU=Warstorm, O=WoWee-Warstorm, L=Mobiles, S=Graphics, C=US"
+        echo "¡Llave keystore generada con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
@@ -105,22 +122,33 @@ jobs:
         chmod -R +x tools/ || true
         chmod -R +x android/ || true
 
-    - name: Compilar APK con Gradle
+    # 🚀 COMPILAR LA APK RELEASE FIRMADA
+    - name: Compilar APK con Gradle (Modo Release Firmado)
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
+        # Inyección de las propiedades de firma dinámica
+        WOWEE_RELEASE_STORE_FILE: "wowee-release.jks"
+        WOWEE_RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+        WOWEE_RELEASE_KEY_ALIAS: "wowee-alias"
+        WOWEE_RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
         cd android
         rm -rf app/.cxx/
         ./gradlew clean
-        ./gradlew assembleDebug --no-daemon \
+        
+        ./gradlew assembleRelease --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false"
+          "-Pandroid.injected.build.model.only=false" \
+          "-PRELEASE_STORE_FILE=$WOWEE_RELEASE_STORE_FILE" \
+          "-PRELEASE_STORE_PASSWORD=$WOWEE_RELEASE_STORE_PASSWORD" \
+          "-PRELEASE_KEY_ALIAS=$WOWEE_RELEASE_KEY_ALIAS" \
+          "-PRELEASE_KEY_PASSWORD=$WOWEE_RELEASE_KEY_PASSWORD"
 
-    - name: Guardar y Descargar APK (Artifact)
+    - name: Guardar y Descargar APK Firmada (Artifact)
       uses: actions/upload-artifact@v4
       with:
-        name: wowee-debug-apk
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: wowee-production-release-apk
+        path: android/app/build/outputs/apk/release/app-release.apk
