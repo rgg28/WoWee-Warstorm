@@ -76,9 +76,9 @@ jobs:
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/28.2.13676358
-        # Protección de RAM para el runner de GitHub
+        # Protección estricta de memoria RAM para evitar que GitHub Actions mate el compilador
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
-        # Compilación nativa en un solo hilo para evitar cuelgues del servidor
+        # Compilación en un solo hilo para garantizar un build sólido y estable
         CMAKE_BUILD_PARALLEL_LEVEL: "1"
       run: |
         cd android
