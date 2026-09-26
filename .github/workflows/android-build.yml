@@ -65,22 +65,21 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE AUTOMÁTICO DE COMPATIBILIDAD VULKAN:
-    # Agrega al vuelo las funciones de extensión al final del namespace vkb
+    # 🔥 PARCHE AUTOMÁTICO DE COMPATIBILIDAD VULKAN CORREGIDO:
     - name: Parche Automático de Compatibilidad Vulkan
       run: |
-        echo "Aplicando parches de compatibilidad inline en VkBootstrap.h..."
+        echo "Aplicando parches de compatibilidad inline explícitos en... VkBootstrap.h"
         
-        # Eliminamos el último corchete de cierre del namespace vkb provisionalmente
-        sed -i '$x' extern/vk-bootstrap/src/VkBootstrap.h
+        # Eliminamos la última línea de cierre provisionalmente para meter el puente
+        sed -i '$d' extern/vk-bootstrap/src/VkBootstrap.h
         
-        # Le inyectamos los métodos que busca vk_context.cpp directamente al final del archivo
+        # Inyectamos las funciones usando el tipado explícito vkb:: para evitar ambigüedades
         cat << 'EOF' >> extern/vk-bootstrap/src/VkBootstrap.h
         
-        // Extensiones agregadas por el script de compilación para soporte móvil
-        inline void enable_features_if_present(const PhysicalDevice&, const void*) {}
-        inline void enable_extension_if_present(const PhysicalDevice&, const char*) {}
-        inline bool is_extension_present(const PhysicalDevice&, const char*) { return false; }
+        // Extensiones agregadas por el script de compilación para soporte móvil Vulkan 1.1
+        inline void enable_features_if_present(const vkb::PhysicalDevice&, const void*) {}
+        inline void enable_extension_if_present(const vkb::PhysicalDevice&, const char*) {}
+        inline bool is_extension_present(const vkb::PhysicalDevice&, const char*) { return false; }
 
         struct CustomQueueDescription {
             uint32_t index = 0;
@@ -91,7 +90,7 @@ jobs:
 
         } // namespace vkb
         EOF
-        echo "¡Archivo VkBootstrap.h parchado automáticamente!"
+        echo "¡Archivo VkBootstrap.h parchado con tipos explícitos con éxito!"
 
     - name: Forzar Permisos Totales en Linux
       run: |
