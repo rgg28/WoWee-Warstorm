@@ -15,6 +15,7 @@ jobs:
       uses: actions/checkout@v5
       with:
         fetch-depth: 0
+        submodules: 'recursive' # Forzamos la descarga limpia de submódulos si existen
 
     - name: Configurar Java 17
       uses: actions/setup-java@v5
@@ -65,52 +66,6 @@ jobs:
           echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    # 🔥 PARCHE DE COMPATIBILIDAD GRÁFICA MÓVIL (Intercepción de métodos mediante macros y structs puente)
-    - name: Parche Seguro de Compatibilidad Vulkan
-      run: |
-        echo "Buscando cabecera de contexto gráfico de WoWee..."
-        TARGET_HEADER=""
-        if [ -f "include/rendering/vk_context.hpp" ]; then
-          TARGET_HEADER="include/rendering/vk_context.hpp"
-        elif [ -f "src/rendering/vk_context.hpp" ]; then
-          TARGET_HEADER="src/rendering/vk_context.hpp"
-        fi
-        
-        if [ -n "$TARGET_HEADER" ]; then
-          echo "Inyectando puente seguro debajo de #pragma once en $TARGET_HEADER..."
-          
-          # Añadimos macros globales interceptoras que reescriben las llamadas miembro de vkb::PhysicalDevice
-          # También inyectamos una réplica de CustomQueueDescription compatible con vectores antiguos
-          sed -i '/#pragma once/a \
-          \
-          // ---- PUENTE DE COMPATIBILIDAD VULKAN GH ACTIONS ----\
-          #ifndef VKB_MOBILES_COMPAT_PATCH\
-          #define VKB_MOBILES_COMPAT_PATCH\
-          #include <vector>\
-          #define enable_features_if_present(w) enable_features_if_present(w)\
-          #define enable_extension_if_present(e) enable_extension_if_present(e)\
-          #define is_extension_present(e) is_extension_present(e)\
-          namespace vkb {\
-              template<typename T> inline void enable_features_if_present(const T&, const void*) {}\
-              template<typename T> inline bool enable_extension_if_present(const T&, const char*) { return false; }\
-              template<typename T> inline bool is_extension_present(const T&, const char*) { return false; }\
-              struct CustomQueueDescriptionPatch { uint32_t index; std::vector<float> priorities; };\
-          }\
-          #undef enable_features_if_present\
-          #undef enable_extension_if_present\
-          #undef is_extension_present\
-          #define enable_features_if_present(x) vkb::enable_features_if_present(vkbPhysicalDevice_, x)\
-          #define enable_extension_if_present(x) vkb::enable_extension_if_present(vkbPhysicalDevice_, x)\
-          #define is_extension_present(x) vkb::is_extension_present(vkbPhysicalDevice_, x)\
-          #define CustomQueueDescription CustomQueueDescriptionPatch\
-          #endif' $TARGET_HEADER
-          
-          echo "¡Puente de extensiones y structs puente inyectado con éxito!"
-        else
-          echo "Error crítico: No se encontró vk_context.hpp para parchar."
-          exit 1
-        fi
-
     - name: Forzar Permisos Totales en Linux
       run: |
         find . -type f -name "*.sh" -exec chmod +x {} + || true
@@ -127,9 +82,12 @@ jobs:
         cd android
         rm -rf app/.cxx/
         ./gradlew clean
+        
+        # Compilamos forzando banderas de preprocesador nativas para ignorar extensiones de escritorio (FSR/RayTracing)
         ./gradlew assembleDebug --no-daemon \
           "-Pandroid.overridePathCheck=true" \
-          "-Pandroid.injected.build.model.only=false"
+          "-Pandroid.injected.build.model.only=false" \
+          "-Pandroid.cmake.arguments=-DVK_BOOTSTRAP_DISABLE_DISPATCH_TABLE=1 -DWOWEE_HAS_AMD_FSR2=0 -DWOWEE_HAS_AMD_FSR3_FRAMEGEN=0"
 
     - name: Guardar y Descargar APK (Artifact)
       uses: actions/upload-artifact@v4
