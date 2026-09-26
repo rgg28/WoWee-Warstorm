@@ -42,6 +42,10 @@ set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/l
 set(OPENSSL_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 set(OpenSSL_FOUND TRUE)
 
+# 🔥 CORRECCIÓN GLOBAL DE CABECERAS (OPENSSL):
+# Forzamos la inclusión del directorio para que archivos como big_num.hpp encuentren openssl/bn.h de inmediato
+include_directories(${OPENSSL_INCLUDE_DIR})
+
 if(NOT TARGET OpenSSL::Crypto)
   add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
   set_target_properties(OpenSSL::Crypto PROPERTIES IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
@@ -114,9 +118,7 @@ target_include_directories(wowee PUBLIC
     ${AUTOMATIC_EXTERN_INCLUDES} 
 )
 
-# 🔥 CORRECCIÓN FINAL DEL LINKER: 
-# 1. Agregamos las librerías físicas de OpenSSL (${OPENSSL_LIBRARIES}) para forzar su enlace en Clang.
-# 2. Agregamos la librería nativa 'z' de Android para resolver compress/uncompress/inflate.
+# 🔥 ENLAZADO DEL LINKER:
 target_link_libraries(wowee PUBLIC 
     ${OPENSSL_LIBRARIES}
     SDL3::SDL3
