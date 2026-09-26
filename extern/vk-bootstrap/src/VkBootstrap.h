@@ -309,7 +309,7 @@ struct Instance {
     operator VkInstance() const;
 
     // Return a loaded instance dispatch table
-    InstanceDispatchTable make_table() const;
+   //InstanceDispatchTable make_table() const;
 
     private:
     bool headless = false;
@@ -667,7 +667,7 @@ class PhysicalDeviceSelector {
         while (pNext_struct) {
             VkBaseOutStructure out_structure{};
             memcpy(&out_structure, pNext_struct, sizeof(VkBaseOutStructure));
-            uint32_t struct_size = vkb::detail::get_structure_size(out_structure.sType);
+            //uint32_t struct_size = vkb::detail::get_structure_size(out_structure.sType);
             if (struct_size > 0) {
                 criteria.extended_features_chain.add_structure(out_structure.sType, struct_size, pNext_struct);
             }
@@ -780,7 +780,7 @@ struct Device {
     Result<std::pair<VkQueue, uint32_t>> get_dedicated_queue_and_index(QueueType type) const;
 
     // Return a loaded dispatch table
-    DispatchTable make_table() const;
+    //DispatchTable make_table() const;
 
     // A conversion function which allows this Device to be used
     // in places where VkDevice would have been used.
