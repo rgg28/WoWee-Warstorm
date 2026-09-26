@@ -119,10 +119,19 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    // 🛡️ FILTRO DE SEGURIDAD PARA CLASES DUPLICADAS DE SDL3 EN EL PROCESO DEX
+    packaging {
+        options {
+            pickFirst 'org/libsdl/app/HIDDevice.class'
+            pickFirst 'org/libsdl/app/*.class'
+        }
+    }
 }
 
 dependencies {
-    implementation files('SDL3-3.4.16.aar')
+    // Se eliminó la dependencia local de SDL3-3.4.16.aar para evitar conflictos
+    // con el código fuente que GitHub Actions descomprime desde SDL3.zip
 }
 
 tasks.configureEach { t ->
