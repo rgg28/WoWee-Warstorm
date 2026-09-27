@@ -32,7 +32,7 @@ jobs:
         yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Preparar Librerías de Dependencias
+    - name: Preparar Librerías y Archivos de Configuración
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         rm -rf include/glm && unzip -q extern/glm.zip -d include/
@@ -41,46 +41,20 @@ jobs:
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
         rm -rf android/sdl3_temp/
-        sed -i 's/"main"/"wowee"/g' android/app/src/main/java/org/libsdl/app/SDLActivity.java || echo "Aviso: No se requirió parchear SDLActivity."
-
-    - name: 🔥 Inyectar AndroidManifest Seguro en UTF-8 Nactivo
-      uses: unioslo/create-file-action@v2.0.0
-      with:
-        path: "android/app/src/main/AndroidManifest.xml"
-        overwrite: true
-        content: |
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com">
-              <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="true" />
-              <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:label="WoWee Warstorm"
-                  android:icon="@mipmap/ic_launcher"
-                  android:roundIcon="@mipmap/ic_launcher_round"
-                  android:theme="@style/WoweeFullscreen"
-                  android:allowBackup="false"
-                  android:hardwareAccelerated="true"
-                  android:hasFragileUserData="true">
-                  <activity
-                      android:name="org.libsdl.app.SDLActivity"
-                      android:label="WoWee Warstorm"
-                      android:exported="true"
-                      android:launchMode="singleTask"
-                      android:screenOrientation="sensorLandscape"
-                      android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
-                      android:preferMinimalPostProcessing="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-
-    - name: Enlazar Mapeos de OpenSSL
-      run: |
-        cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h || echo "Aviso: No se encontró OpenSSL local."
+        
+        TARGET_JAVA_FILE="android/app/src/main/java/org/libsdl/app/SDLActivity.java"
+        if [ -f "$TARGET_JAVA_FILE" ]; then
+          sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
+        fi
+        
+        # Inyección del Manifiesto usando printf nativo
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        rm -f "$MANIFEST_PATH"
+        printf '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://android.com">\n ... </manifest>\n' > "$MANIFEST_PATH"
+        
+        if [ -f "android/openssl/include/openssl/configuration.h" ]; then
+          cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
+        fi
 
     - name: Generar Keystore Digital
       env:
