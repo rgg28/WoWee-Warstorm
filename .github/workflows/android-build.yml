@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    
-    # 🛡️ Fuerza al entorno virtual a ejecutar los scripts JavaScript bajo Node 24
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -27,103 +25,91 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
-    - name: Configurar Entorno de Android SDK
+    - name: Configurar Entorno y Dependencias de Android SDK
       run: |
         echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/28.2.13676358" >> $GITHUB_ENV
-
-    - name: Aceptar Licencias del SDK de Android
-      run: |
         yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-    - name: Instalar Dependencias NDK y CMake
-      run: |
         /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --install "ndk;28.2.13676358" "cmake;3.22.1"
 
-    - name: Preparar Librerías Externas (GLM y SDL3)
+    - name: Preparar Librerías y Archivos de Configuración
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
-        
-        # 1. Descomprimir GLM
-        rm -rf include/glm
-        unzip -q extern/glm.zip -d include/
-        
-        # 2. Preparar carpetas limpias para SDL3
-        rm -rf include/SDL3
-        rm -rf android/sdl3
-        mkdir -p include
-        mkdir -p android/sdl3/arm64-v8a
-        
-        # 3. Descomprimir SDL3
+        rm -rf include/glm && unzip -q extern/glm.zip -d include/
+        rm -rf include/SDL3 android/sdl3 && mkdir -p include android/sdl3/arm64-v8a
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
-        
-        # 4. Organizar elementos para el compilador nativo de CMake
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
         rm -rf android/sdl3_temp/
         
-        # 5. 🔥 PARCHE DE TEXTO: Reemplazamos la llamada a libmain.so por libwowee.so de forma automática
         TARGET_JAVA_FILE="android/app/src/main/java/org/libsdl/app/SDLActivity.java"
-        if [ -f "$TARGET_JAVA_FILE" ]; then
-          sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
-          echo "¡SDLActivity.java modificado con éxito para enlazar libwowee.so!"
-        else
-          echo "Error crítico: No se encontró SDLActivity.java en el repositorio."
-          exit 1
-        fi
+        [ -f "$TARGET_JAVA_FILE" ] && sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
         
-        # 6. Enlace local de OpenSSL
+        # Generación de AndroidManifest.xml y enlace de OpenSSL
+        MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+        rm -f "$MANIFEST_PATH"
+        cat << 'EOF' > "$MANIFEST_PATH"
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://android.com">
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="true" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <application
+        android:label="WoWee Warstorm"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/WoweeFullscreen"
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:hasFragileUserData="true">
+        <activity
+            android:name="org.libsdl.app.SDLActivity"
+            android:label="WoWee Warstorm"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density"
+            android:preferMinimalPostProcessing="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+EOF
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
-          echo "¡opensslconf.h enlazado correctamente de forma local!"
         fi
 
-    - name: Generar Keystore Digital en Tiempo de Ejecución
+    - name: Generar Keystore Digital
       env:
         STORE_PASS: ${{ secrets.STORE_PASS }}
         KEY_PASS: ${{ secrets.KEY_PASS }}
       run: |
-        if [ -z "$STORE_PASS" ] || [ -z "$KEY_PASS" ]; then
-          echo "Error crítico: Los secretos de contraseñas de firma están vacíos en GitHub."
-          exit 1
-        fi
-        echo "Generando wowee-release.jks..."
         keytool -genkey -v \
           -keystore android/app/wowee-release.jks \
-          -keyalg RSA \
-          -keysize 2048 \
-          -validity 10000 \
-          -alias wowee-alias \
-          -storepass "$STORE_PASS" \
-          -keypass "$KEY_PASS" \
+          -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias wowee-alias -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
           -dname "CN=Wowee, OU=Warstorm, O=WoWee-Warstorm, L=Mobiles, S=Graphics, C=US"
-        echo "¡Llave keystore generada con éxito!"
 
-    - name: Asignar Permisos de Ejecución
-      run: |
-        find . -type f -name "*.sh" -exec chmod +x {} + || true
-        chmod -R +x tools/ || true
-        chmod -R +x android/ || true
-
-    - name: Compilar y Firmar APK (Gradle)
+    - name: Asignar Permisos y Compilar APK
       env:
-        WOWEE_RELEASE_STORE_FILE: "wowee-release.jks"
-        WOWEE_RELEASE_STORE_PASSWORD: ${{ secrets.STORE_PASS }}
-        WOWEE_RELEASE_KEY_ALIAS: "wowee-alias"
-        WOWEE_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASS }}
+        STORE_PASS: ${{ secrets.STORE_PASS }}
+        KEY_PASS: ${{ secrets.KEY_PASS }}
         GRADLE_OPTS: "-Xmx1548m -Dorg.gradle.workers.max=1"
         CMAKE_BUILD_PARALLEL_LEVEL: 1
       run: |
-        cd android
-        rm -rf app/.cxx/
-        ./gradlew clean
+        find . -type f -name "*.sh" -exec chmod +x {} + || true
+        chmod -R +x tools/ android/ || true
+        cd android && rm -rf app/.cxx/ && ./gradlew clean
         ./gradlew assembleRelease --no-daemon \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false" \
-          "-PRELEASE_STORE_FILE=$WOWEE_RELEASE_STORE_FILE" \
-          "-PRELEASE_STORE_PASSWORD=$WOWEE_RELEASE_STORE_PASSWORD" \
-          "-PRELEASE_KEY_ALIAS=$WOWEE_RELEASE_KEY_ALIAS" \
-          "-PRELEASE_KEY_PASSWORD=$WOWEE_RELEASE_KEY_PASSWORD"
+          "-PRELEASE_STORE_FILE=wowee-release.jks" \
+          "-PRELEASE_STORE_PASSWORD=$STORE_PASS" \
+          "-PRELEASE_KEY_ALIAS=wowee-alias" \
+          "-PRELEASE_KEY_PASSWORD=$KEY_PASS"
 
     - name: Subir APK Compilada como Artefacto
       uses: actions/upload-artifact@v4
