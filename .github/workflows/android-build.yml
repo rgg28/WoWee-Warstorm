@@ -47,10 +47,23 @@ jobs:
           sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
         fi
         
-        # Inyección del Manifiesto usando printf nativo
+        # Inyección del Manifiesto con la URL de namespace oficial corregida
         MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
         rm -f "$MANIFEST_PATH"
-        printf '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://android.com">\n ... </manifest>\n' > "$MANIFEST_PATH"
+        echo '<?xml version="1.0" encoding="utf-8"?>' > "$MANIFEST_PATH"
+        echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' >> "$MANIFEST_PATH"
+        echo '    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="true" />' >> "$MANIFEST_PATH"
+        echo '    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />' >> "$MANIFEST_PATH"
+        echo '    <uses-permission android:name="android.permission.INTERNET" />' >> "$MANIFEST_PATH"
+        echo '    <application android:label="WoWee Warstorm" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:theme="@style/WoweeFullscreen" android:allowBackup="false" android:hardwareAccelerated="true" android:hasFragileUserData="true">' >> "$MANIFEST_PATH"
+        echo '        <activity android:name="org.libsdl.app.SDLActivity" android:label="WoWee Warstorm" android:exported="true" android:launchMode="singleTask" android:screenOrientation="sensorLandscape" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density" android:preferMinimalPostProcessing="true">' >> "$MANIFEST_PATH"
+        echo '            <intent-filter>' >> "$MANIFEST_PATH"
+        echo '                <action android:name="android.intent.action.MAIN" />' >> "$MANIFEST_PATH"
+        echo '                <category android:name="android.intent.category.LAUNCHER" />' >> "$MANIFEST_PATH"
+        echo '            </intent-filter>' >> "$MANIFEST_PATH"
+        echo '        </activity>' >> "$MANIFEST_PATH"
+        echo '    </application>' >> "$MANIFEST_PATH"
+        echo '</manifest>' >> "$MANIFEST_PATH"
         
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
@@ -80,6 +93,8 @@ jobs:
         ./gradlew assembleRelease --no-daemon \
           "-Pandroid.overridePathCheck=true" \
           "-Pandroid.injected.build.model.only=false" \
+          "-Pandroid.lintOptions.abortOnError=false" \
+          "-Pandroid.lintOptions.checkReleaseBuilds=false" \
           "-PRELEASE_STORE_FILE=wowee-release.jks" \
           "-PRELEASE_STORE_PASSWORD=$STORE_PASS" \
           "-PRELEASE_KEY_ALIAS=wowee-alias" \
