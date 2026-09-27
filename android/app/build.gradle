@@ -105,8 +105,18 @@ android {
         }
     }
 
-    sourceSets.main.assets.srcDirs = [stagedAssets]
-    sourceSets.debug.assets.srcDirs = [stagedMusic]
+    // 🎵 CORRECCIÓN DE SOURCESETS: Ambos entornos heredan y suman las carpetas correspondientes
+    sourceSets {
+        main {
+            assets.srcDirs = [stagedAssets]
+        }
+        debug {
+            assets.srcDirs += [stagedMusic]
+        }
+        release {
+            assets.srcDirs += [stagedMusic]
+        }
+    }
 
     buildTypes {
         release {
@@ -141,6 +151,7 @@ tasks.configureEach { t ->
         n.startsWith('bundle')
     if (!readsAssets) return
 
+    // 🚀 CORRECCIÓN DE DEPENDENCIAS: Asegura que la música se procese SIEMPRE
     t.dependsOn 'stageAssets'
-    if (n.contains('Debug')) t.dependsOn 'stageMusic'
+    t.dependsOn 'stageMusic'
 }
