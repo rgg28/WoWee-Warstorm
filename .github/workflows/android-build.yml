@@ -43,9 +43,10 @@ jobs:
         rm -rf android/sdl3_temp/
         
         TARGET_JAVA_FILE="android/app/src/main/java/org/libsdl/app/SDLActivity.java"
-        [ -f "$TARGET_JAVA_FILE" ] && sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
+        if [ -f "$TARGET_JAVA_FILE" ]; then
+          sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
+        fi
         
-        # Generación de AndroidManifest.xml y enlace de OpenSSL
         MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
         rm -f "$MANIFEST_PATH"
         cat << 'EOF' > "$MANIFEST_PATH"
