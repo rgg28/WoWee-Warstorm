@@ -111,7 +111,6 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            // Mapeamos para que use la firma de producción autogenerada
             signingConfig signingConfigs.release
         }
     }
@@ -120,7 +119,7 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // 🛡️ FILTRO DE SEGURIDAD CORREGIDO (Sintaxis plana para versiones modernas de AGP)
+    // 🛡️ FILTRO DE SEGURIDAD PARA EVITAR COLISIONES EN LAS CLASES DEX DE INTERFAZ DE SDL3
     packaging {
         pickFirst 'org/libsdl/app/HIDDevice.class'
         pickFirst 'org/libsdl/app/*.class'
@@ -128,8 +127,7 @@ android {
 }
 
 dependencies {
-    // Se eliminó la dependencia local de SDL3-3.4.16.aar para evitar conflictos
-    // con el código fuente que GitHub Actions descomprime desde SDL3.zip
+    // Mantener vacío: No acarrear dependencias .aar locales redundantes
 }
 
 tasks.configureEach { t ->
