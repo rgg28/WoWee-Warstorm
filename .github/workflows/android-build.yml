@@ -37,22 +37,23 @@ jobs:
         sudo apt-get update && sudo apt-get install -y unzip
         rm -rf include/glm && unzip -q extern/glm.zip -d include/
         
-        # Limpieza e indexación limpia de SDL3
+        # Limpieza e indexación limpia usando la estructura real de tu zip (.so suelto y carpeta SDL3)
         rm -rf include/SDL3 android/sdl3 && mkdir -p include android/sdl3/arm64-v8a
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
         
-        # Movemos las cabeceras e inyectamos el binario nativo .so
+        # Movemos las cabeceras (.h) e inyectamos el binario nativo suelto (.so)
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
-        
-        # 🚀 CORRECCIÓN CRÍTICA DE INTERFAZ:
-        # Reemplazamos los archivos Java viejos de tu repositorio por los del zip actualizado de SDL3.
-        # Esto asegura que métodos como 'onNativePinchStart()' existan en tiempo de ejecución de Java.
-        mkdir -p android/app/src/main/java/org/libsdl/app/
-        cp -f android/sdl3_temp/java/org/libsdl/app/*.java android/app/src/main/java/org/libsdl/app/
-        
-        # Borramos la carpeta temporal de la extracción de SDL3
         rm -rf android/sdl3_temp/
+        
+        # 🚀 INYECCIÓN DE MÉTODOS JNI FALTANTES EN TU SDLACTIVITY LOCAL:
+        # Esto soluciona el "java.lang.NoSuchMethodError: onNativePinchStart" sin depender de archivos del zip
+        TARGET_JAVA_FILE="android/app/src/main/java/org/libsdl/app/SDLActivity.java"
+        if [ -f "$TARGET_JAVA_FILE" ]; then
+          if ! grep -q "onNativePinchStart" "$TARGET_JAVA_FILE"; then
+            sed -i '/public static native void onNativeTouch/i \    public static native void onNativePinchStart();\n    public static native void onNativePinchGesture(float dDist, float dAngle);\n    public static native void onNativePinchEnd();' "$TARGET_JAVA_FILE"
+          fi
+        fi
         
         # 🚀 INYECCIÓN DEL MANIFIESTO DE WOWEE CORREGIDO Y SEGURO (Mapeo de MicroSD e interfaz activa)
         MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
@@ -64,7 +65,6 @@ jobs:
         echo '    <uses-permission android:name="android.permission.INTERNET" />' >> "$MANIFEST_PATH"
         echo '    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />' >> "$MANIFEST_PATH"
         echo '    <application android:label="WoWee Warstorm" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:theme="@style/WoweeFullscreen" android:allowBackup="false" android:hardwareAccelerated="true" android:hasFragileUserData="true">' >> "$MANIFEST_PATH"
-        # 🔥 CLAVE DE LA SOLUCIÓN: Apunta a tu com.wowee.client.WoweeActivity nativa en lugar de la clase genérica de SDL
         echo '        <activity android:name="com.wowee.client.WoweeActivity" android:label="WoWee Warstorm" android:exported="true" android:launchMode="singleTask" android:screenOrientation="sensorLandscape" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density" android:preferMinimalPostProcessing="true">' >> "$MANIFEST_PATH"
         echo '            <intent-filter>' >> "$MANIFEST_PATH"
         echo '                <action android:name="android.intent.action.MAIN" />' >> "$MANIFEST_PATH"
