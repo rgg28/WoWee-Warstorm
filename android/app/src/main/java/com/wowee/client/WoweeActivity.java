@@ -2,6 +2,7 @@ package com.wowee.client;
 
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
@@ -18,9 +19,8 @@ import org.libsdl.app.SDLActivity;
  * Puts the client's files where the desktop build expects to find them, then
  * hands off to SDL.
  *
- * Modified to load assets and game Data from a generic, user-accessible 
- * directory in the internal shared storage (/sdcard/WoWee) instead of 
- * the private scoped storage.
+ * Modified to support reading from the physical MicroSD card with an automatic
+ * fallback to the internal public Documents directory.
  */
 public class WoweeActivity extends SDLActivity {
 
@@ -29,7 +29,12 @@ public class WoweeActivity extends SDLActivity {
     /** SDLActivity loads these in order; libwowee.so provides SDL_main. */
     @Override
     protected String[] getLibraries() {
-        return new String[] { "SDL3", "wowee" };
+        return new String[] { 
+            "crypto_3", 
+            "ssl_3", 
+            "SDL3", 
+            "wowee" 
+        };
     }
 
     @Override
@@ -37,10 +42,30 @@ public class WoweeActivity extends SDLActivity {
         // Everything below has to happen before super.onCreate, which loads the
         // native library and calls into main().
         
-        // CAMBIO: Apuntamos directamente a una carpeta en la raíz de la memoria interna
-        File root = new File("/sdcard/WoWee");
+        File root = null;
+
+        /**
+         * 🚀 PASO 1: Intentar buscar directorios externos (MicroSD)
+         * getExternalFilesDirs() devuelve un arreglo: 
+         * [0] suele ser la memoria interna, [1] es la MicroSD física si está insertada.
+         */
+        File[] externalDirs = getExternalFilesDirs(null);
+        if (externalDirs != null && externalDirs.length > 1 && externalDirs[1] != null) {
+            // Creamos una subcarpeta "WoWee" limpia dentro de la MicroSD autorizada
+            root = new File(externalDirs[1], "WoWee");
+            Log.i(TAG, "MicroSD detectada en: " + root.getAbsolutePath());
+        }
+
+        /**
+         * 🚀 PASO 2: FALLBACK (Si no hay MicroSD o no se puede usar, va a Documentos internos)
+         */
+        if (root == null) {
+            File publicDocuments = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+            root = new File(publicDocuments, "WoWee");
+            Log.i(TAG, "Usando memoria interna (Documentos) en: " + root.getAbsolutePath());
+        }
         
-        // Creamos el directorio raíz si no existe previamente
+        // Creamos el directorio raíz definitivo si no existe previamente
         if (!root.exists()) {
             root.mkdirs();
         }
