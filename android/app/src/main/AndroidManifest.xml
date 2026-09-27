@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://android.com"
-          package="com.wowee.client">
+<manifest xmlns:android="http://android.com">
 
     <!-- Requerimos Vulkan 1.2/1.3 de forma nativa desde el API 33 en adelante -->
-    <uses-feature android:name="android.hardware.vulkan.version"
-                  android:version="0x00401000" android:required="true" />
-    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature 
+        android:name="android.hardware.vulkan.version"
+        android:version="0x00401000" 
+        android:required="true" />
+        
+    <uses-feature 
+        android:name="android.hardware.touchscreen" 
+        android:required="false" />
     
     <!-- Permisos limpios y compatibles con las directivas de seguridad de Android 16 -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -19,7 +23,7 @@
         android:hardwareAccelerated="true"
         android:hasFragileUserData="true">
 
-        <!-- 🔥 APUNTAMOS DIRECTO A LA CLASE JAVA DE SDL3 QUE RE MANEJA EL MOTOR NATIVO -->
+        <!-- Enlazamos la clase Java de SDL3 que maneja tu motor dinámico -->
         <activity
             android:name="org.libsdl.app.SDLActivity"
             android:label="WoWee Warstorm"
