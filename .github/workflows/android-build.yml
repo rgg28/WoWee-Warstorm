@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     
-    # 🛡️ FUERZA A GITHUB ACTIONS A UTILIZAR NODE 24 EN TODAS LAS ACCIONES COMPONENTES
+    # 🛡️ Fuerza al entorno virtual a ejecutar los scripts JavaScript bajo Node 24
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -57,12 +57,22 @@ jobs:
         # 3. Descomprimir SDL3
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
         
-        # 4. Organizar elementos para el compilador
+        # 4. Organizar elementos para el compilador nativo de CMake
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
         rm -rf android/sdl3_temp/
         
-        # 5. Enlace local de OpenSSL
+        # 5. 🔥 PARCHE DE TEXTO: Reemplazamos la llamada a libmain.so por libwowee.so de forma automática
+        TARGET_JAVA_FILE="android/app/src/main/java/org/libsdl/app/SDLActivity.java"
+        if [ -f "$TARGET_JAVA_FILE" ]; then
+          sed -i 's/"main"/"wowee"/g' "$TARGET_JAVA_FILE"
+          echo "¡SDLActivity.java modificado con éxito para enlazar libwowee.so!"
+        else
+          echo "Error crítico: No se encontró SDLActivity.java en el repositorio."
+          exit 1
+        fi
+        
+        # 6. Enlace local de OpenSSL
         if [ -f "android/openssl/include/openssl/configuration.h" ]; then
           cp android/openssl/include/openssl/configuration.h android/openssl/include/openssl/opensslconf.h
           echo "¡opensslconf.h enlazado correctamente de forma local!"
