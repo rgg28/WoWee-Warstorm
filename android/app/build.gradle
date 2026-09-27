@@ -105,10 +105,12 @@ android {
         }
     }
 
-    // 🎵 CORRECCIÓN DE SOURCESETS: Ambos entornos heredan y suman las carpetas correspondientes
+    // 🎵 CORRECCIÓN DE SOURCESETS: Se añade la inyección de carpetas nativas jniLibs para OpenSSL
     sourceSets {
         main {
             assets.srcDirs = [stagedAssets]
+            // 🚀 LÍNEA CORREGIDA: Le dice a Gradle que empaquete tus .so de la carpeta física de OpenSSL
+            jniLibs.srcDirs = ['openssl'] 
         }
         debug {
             assets.srcDirs += [stagedMusic]
