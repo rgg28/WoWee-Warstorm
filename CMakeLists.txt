@@ -35,28 +35,48 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-nullability-completeness)
 endif()
 
-# 🛠️ MAPEO DE OPENSSL DINÁMICO (Actualizado a OpenSSL 3.0)
-set(OPENSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/include")
-set(OPENSSL_CRYPTO_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libcrypto_3.so") 
-set(OPENSSL_SSL_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl/arm64-v8a/libssl_3.so")       
+# 🛠️ MAPEO DE OPENSSL DINÁMICO CORREGIDO (Usa la variable enviada por GitHub Actions)
+if(NOT OPENSSL_ROOT_DIR)
+    # Fallback relativo si se compila localmente fuera de Actions
+    set(OPENSSL_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android/openssl")
+endif()
+
+message(STATUS "WoWee: Usando OPENSSL_ROOT_DIR -> ${OPENSSL_ROOT_DIR}")
+
+set(OPENSSL_INCLUDE_DIR "${OPENSSL_ROOT_DIR}/include")
+set(OPENSSL_CRYPTO_LIBRARY "${OPENSSL_ROOT_DIR}/arm64-v8a/libcrypto_3.so") 
+set(OPENSSL_SSL_LIBRARY "${OPENSSL_ROOT_DIR}/arm64-v8a/libssl_3.so")       
 set(OPENSSL_LIBRARIES ${OPENSSL_CRYPTO_LIBRARY} ${OPENSSL_SSL_LIBRARY})
 set(OpenSSL_FOUND TRUE)
 
 # 🔥 CORRECCIÓN GLOBAL DE CABECERAS (OPENSSL):
-# Forzamos la inclusión del directorio para que archivos como big_num.hpp encuentren openssl/bn.h de inmediato
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 if(NOT TARGET OpenSSL::Crypto)
   add_library(OpenSSL::Crypto UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::Crypto PROPERTIES IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}")
+  set_target_properties(OpenSSL::Crypto PROPERTIES 
+    IMPORTED_LOCATION "${OPENSSL_CRYPTO_LIBRARY}" 
+    INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
+  )
 endif()
 if(NOT TARGET OpenSSL::SSL)
   add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::SSL PROPERTIES IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
+  set_target_properties(OpenSSL::SSL PROPERTIES 
+    IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}" 
+    INTERFACE_LINK_LIBRARIES OpenSSL::Crypto
+  )
 endif()
 
-# 📦 MAPEO DE SDL3 (UBICACIONES PROVISTAS POR EL SCRIPT DE ACTIONS)
+# 📦 MAPEO DE SDL3 CORREGIDO (Sube dos niveles desde CMakeLists hacia la carpeta android)
 set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3/arm64-v8a/libSDL3.so")
+if(NOT EXISTS "${SDL3_LIBRARY}")
+    # Intento alternativo asumiendo que CMake está en la raíz y busca la subcarpeta del submódulo de Android
+    set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/jniLibs/arm64-v8a/libSDL3.so")
+    # Si la ruta sigue sin encontrarse con la estructura física real, apunta al puente relativo correcto:
+    if(NOT EXISTS "${SDL3_LIBRARY}")
+        set(SDL3_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/android/sdl3/arm64-v8a/libSDL3.so")
+    endif()
+endif()
 
 if(NOT TARGET SDL3::SDL3)
   add_library(SDL3::SDL3 SHARED IMPORTED)
@@ -118,9 +138,10 @@ target_include_directories(wowee PUBLIC
     ${AUTOMATIC_EXTERN_INCLUDES} 
 )
 
-# 🔥 ENLAZADO DEL LINKER:
+# 🔥 ENLAZADO DEL LINKER CORREGIDO:
 target_link_libraries(wowee PUBLIC 
-    ${OPENSSL_LIBRARIES}
+    OpenSSL::SSL
+    OpenSSL::Crypto
     SDL3::SDL3
     vulkan
     android
