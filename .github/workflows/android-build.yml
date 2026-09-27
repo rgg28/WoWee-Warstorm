@@ -36,20 +36,29 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         rm -rf include/glm && unzip -q extern/glm.zip -d include/
+        
+        # Limpieza e indexación limpia de SDL3
         rm -rf include/SDL3 android/sdl3 && mkdir -p include android/sdl3/arm64-v8a
         unzip -q extern/SDL3.zip -d android/sdl3_temp/
+        
+        # Movemos las cabeceras e inyectamos el binario nativo .so
         mv android/sdl3_temp/SDL3 include/
         mv android/sdl3_temp/libSDL3.so android/sdl3/arm64-v8a/
-        rm -rf android/sdl3_temp/
         
-        # 🚀 REEMPLAZO ELIMINADO: Ya no modificamos el arreglo interno de SDLActivity mediante sed,
-        # dado que el orden de carga (OpenSSL -> SDL3 -> wowee) está blindado en tu WoweeActivity.java
+        # 🚀 CORRECCIÓN CRÍTICA DE INTERFAZ:
+        # Reemplazamos los archivos Java viejos de tu repositorio por los del zip actualizado de SDL3.
+        # Esto asegura que métodos como 'onNativePinchStart()' existan en tiempo de ejecución de Java.
+        mkdir -p android/app/src/main/java/org/libsdl/app/
+        cp -f android/sdl3_temp/java/org/libsdl/app/*.java android/app/src/main/java/org/libsdl/app/
+        
+        # Borramos la carpeta temporal de la extracción de SDL3
+        rm -rf android/sdl3_temp/
         
         # 🚀 INYECCIÓN DEL MANIFIESTO DE WOWEE CORREGIDO Y SEGURO (Mapeo de MicroSD e interfaz activa)
         MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
         rm -f "$MANIFEST_PATH"
         echo '<?xml version="1.0" encoding="utf-8"?>' > "$MANIFEST_PATH"
-        echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' >> "$MANIFEST_PATH"
+        echo '<manifest xmlns:android="http://android.com">' >> "$MANIFEST_PATH"
         echo '    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x00401000" android:required="true" />' >> "$MANIFEST_PATH"
         echo '    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />' >> "$MANIFEST_PATH"
         echo '    <uses-permission android:name="android.permission.INTERNET" />' >> "$MANIFEST_PATH"
